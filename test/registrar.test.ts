@@ -3,10 +3,10 @@ import { Foundry } from "@adraffy/blocksmith";
 import { randomBytes, randomInt } from "crypto";
 import { getRootHash, type MaybeNode } from "../src/trie.js";
 import { insertBytes } from "../src/kv.js";
-import { bytesFrom, followSlot, toHex } from "../src/utils.js";
+import { toBytes, followSlot, toHex } from "../src/utils.js";
 import { getStorageHash } from "./utils.js";
 
-describe("ReverseRegistrar", () => {
+describe("registrar", () => {
 	let F: Foundry;
 	beforeAll(async () => {
 		F = await Foundry.launch({ infoLog: true });
@@ -24,7 +24,7 @@ describe("ReverseRegistrar", () => {
 		registrar.on("NameForAddrChanged", (addr: string, name: string) => {
 			node = insertBytes(
 				node,
-				followSlot(0n, bytesFrom(addr, 32)),
+				followSlot(0n, toBytes(addr, 32)),
 				Buffer.from(name)
 			);
 		});

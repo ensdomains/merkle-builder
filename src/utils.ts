@@ -5,7 +5,7 @@ export function keccak256(v: Uint8Array): Uint8Array {
 }
 
 export function followSlot(slot: bigint, key: Uint8Array) {
-	return keccak256(Buffer.concat([key, bytesFrom(slot, 32)]));
+	return keccak256(Buffer.concat([key, toBytes(slot, 32)]));
 }
 
 export function trimLeadingZeros(v: Uint8Array): Uint8Array {
@@ -14,7 +14,7 @@ export function trimLeadingZeros(v: Uint8Array): Uint8Array {
 	return v.subarray(i);
 }
 
-export function bytesFrom(x: string | number | bigint, w?: number): Uint8Array {
+export function toBytes(x: string | number | bigint, w?: number): Uint8Array {
 	if (typeof x === 'string') {
 		if (!/^0x[0-9a-f]*$/i.test(x)) throw new Error(`expected hex: ${x}`);
 		x = x.slice(2);
@@ -25,7 +25,7 @@ export function bytesFrom(x: string | number | bigint, w?: number): Uint8Array {
 	return Buffer.from(x.padStart(w << 1, "0"), "hex");
 }
 
-export function bigIntFrom(v: Uint8Array): bigint {
+export function toBigInt(v: Uint8Array): bigint {
 	return trimLeadingZeros(v).reduce<bigint>(
 		(a, x) => (a << 8n) | BigInt(x),
 		0n

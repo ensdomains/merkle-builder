@@ -1,4 +1,6 @@
 import {
+	EMPTY_BYTES,
+	EMPTY_LEAF,
 	isBranch,
 	isEmptyLeaf,
 	isExtension,
@@ -13,7 +15,7 @@ export class Coder {
 		const required = this.pos + need;
 		let size = this.buf.length;
 		if (required <= size) return;
-		while (size < required) size *= 2; // exponential growth
+		while (size < required) size <<= 1;
 		const v = new Uint8Array(size);
 		v.set(this.buf);
 		this.buf = v;
@@ -32,6 +34,7 @@ export class Coder {
 		this.buf[this.pos++] = x;
 	}
 	readBytes(n: number) {
+		if (!n) return EMPTY_BYTES;
 		this.require(n);
 		return this.buf.slice(this.pos, (this.pos += n));
 	}
@@ -75,10 +78,8 @@ export class Coder {
 				if (!child) throw new Error("bug");
 				return { path, child };
 			}
-			case 3: {
-				const v = new Uint8Array(0);
-				return { path: v, value: v };
-			}
+			case 3:
+				return EMPTY_LEAF;
 			case 4: {
 				return {
 					path: this.readPath(),
