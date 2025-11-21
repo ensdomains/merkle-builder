@@ -7,8 +7,11 @@ type BranchNode = { children: MaybeNode[] };
 export type Node = LeafNode | ExtensionNode | BranchNode;
 export type MaybeNode = Node | undefined;
 
-export const EMPTY_BYTES = Object.freeze(new Uint8Array(0));
-export const EMPTY_LEAF: LeafNode = Object.freeze({ path: EMPTY_BYTES, value: EMPTY_BYTES });
+export const EMPTY_BYTES = new Uint8Array(0);
+export const EMPTY_LEAF: LeafNode = Object.freeze({
+	path: EMPTY_BYTES,
+	value: EMPTY_BYTES,
+});
 
 const RLP_NULL = encodeRlpBytes(EMPTY_BYTES); // 0x80
 const RLP_EMPTY = encodeRlpList([encodeRlpList([])]); // 0xc1c0
@@ -52,7 +55,7 @@ export function findValue(
 		) {
 			return findValue(node.child, path.subarray(n));
 		}
-	} else if (!Buffer.compare(node?.path, path)) {
+	} else if (!Buffer.compare(node.path, path)) {
 		return node.value;
 	}
 }

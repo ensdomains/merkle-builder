@@ -1,10 +1,9 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
-import { randomBytes, randomInt } from "crypto";
 import { getRootHash, type MaybeNode } from "../src/trie.js";
 import { insertBytes } from "../src/kv.js";
 import { toBytes, followSlot, toHex } from "../src/utils.js";
-import { getStorageHash } from "./utils.js";
+import { getStorageHash, randomBytes, randomInt } from "./utils.js";
 
 describe("registrar", () => {
 	let F: Foundry;
