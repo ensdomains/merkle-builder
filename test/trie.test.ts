@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { findValue, toNibblePath } from "../src/trie.js";
+import { findLeaf, toNibblePath } from "../src/trie.js";
 import { randomTrie } from "./utils.js";
 import { keccak256 } from "../src/utils.js";
 
 describe("trie", () => {
 	describe("findNode", () => {
 		test("empty", () => {
-			expect(findValue(undefined, new Uint8Array(0))).toBeUndefined();
+			expect(findLeaf(undefined, new Uint8Array(0))).toBeUndefined();
 		});
 
 		for (let i = 0; i < 20; ++i) {
@@ -14,7 +14,7 @@ describe("trie", () => {
 				const { node, storage } = randomTrie();
 				for (const [k, v] of storage) {
 					expect(
-						findValue(node, toNibblePath(keccak256(k)))
+						findLeaf(node, toNibblePath(keccak256(k)))?.value
 					).toStrictEqual(v);
 				}
 			});

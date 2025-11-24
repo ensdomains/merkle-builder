@@ -8,6 +8,12 @@ import {
 	type MaybeNode,
 } from "./trie.js";
 
+const TY_NULL = 0;
+const TY_BRANCH = 1;
+const TY_EXTENSION = 2;
+const TY_EMPTY_LEAF = 3;
+const TY_LEAF = 4;
+
 export class Coder {
 	public pos = 0;
 	constructor(public buf: Uint8Array = new Uint8Array(1024)) {}
@@ -66,46 +72,45 @@ export class Coder {
 	readNode(): MaybeNode {
 		const ty = this.readByte();
 		switch (ty) {
-			case 0:
-				return undefined;
-			case 1:
+			case TY_NULL:
+				return;
+			case TY_BRANCH:
 				return {
 					children: Array.from({ length: 16 }, () => this.readNode()),
 				};
-			case 2: {
+			case TY_EXTENSION: {
 				const path = this.readPath();
 				const child = this.readNode();
 				if (!child) throw new Error("bug");
 				return { path, child };
 			}
-			case 3:
+			case TY_EMPTY_LEAF:
 				return EMPTY_LEAF;
-			case 4: {
+			case TY_LEAF:
 				return {
 					path: this.readPath(),
 					value: this.readSmallBytes(),
 				};
-			}
 			default:
 				throw new Error(`unknown type: ${ty}`);
 		}
 	}
 	writeNode(node: MaybeNode) {
 		if (!node) {
-			this.writeByte(0);
+			this.writeByte(TY_NULL);
 		} else if (isBranch(node)) {
-			this.writeByte(1);
+			this.writeByte(TY_BRANCH);
 			for (const x of node.children) {
 				this.writeNode(x);
 			}
 		} else if (isExtension(node)) {
-			this.writeByte(2);
+			this.writeByte(TY_EXTENSION);
 			this.writePath(node.path);
 			this.writeNode(node.child);
 		} else if (isEmptyLeaf(node)) {
-			this.writeByte(3);
+			this.writeByte(TY_EMPTY_LEAF);
 		} else {
-			this.writeByte(4);
+			this.writeByte(TY_LEAF);
 			this.writePath(node.path);
 			this.writeSmallBytes(node.value);
 		}

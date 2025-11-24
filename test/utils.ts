@@ -1,6 +1,6 @@
-import type { JsonRpcApiProvider } from "ethers/providers";
 import { inspect } from "bun";
 import { randomBytes, randomInt } from "crypto";
+import type { Foundry } from "@adraffy/blocksmith";
 import { insertNode, toNibblePath, type MaybeNode } from "../src/trie.js";
 import { keccak256, toHex, trimLeadingZeros } from "../src/utils.js";
 
@@ -8,15 +8,11 @@ export function dump(node: MaybeNode) {
 	console.log(inspect(node, { depth: Infinity, colors: true }));
 }
 
-export async function getStorageHash(
-	provider: JsonRpcApiProvider,
-	address: string
-) {
-	const proof: { storageHash: string } = await provider.send("eth_getProof", [
-		address,
-		[],
-		"latest",
-	]);
+export async function getStorageHash(foundry: Foundry, address: string) {
+	const proof: { storageHash: string } = await foundry.provider.send(
+		"eth_getProof",
+		[address, [], "latest"]
+	);
 	return proof.storageHash;
 }
 

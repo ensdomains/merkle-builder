@@ -5,6 +5,7 @@ export function keccak256(v: Uint8Array): Uint8Array {
 }
 
 export function followSlot(slot: bigint, key: Uint8Array) {
+	// https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#mappings-and-dynamic-arrays
 	return keccak256(Buffer.concat([key, toBytes(slot, 32)]));
 }
 

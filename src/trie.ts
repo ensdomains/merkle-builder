@@ -15,7 +15,7 @@ export const EMPTY_LEAF: LeafNode = Object.freeze({
 
 const RLP_NULL = encodeRlpBytes(EMPTY_BYTES); // 0x80
 const RLP_EMPTY = encodeRlpList([encodeRlpList([])]); // 0xc1c0
-const HASH_NULL = keccak256(RLP_NULL);
+const HASH_NULL = keccak256(RLP_NULL); // 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
 
 export function isBranch(node: MaybeNode): node is BranchNode {
 	return !!node && "children" in node;
@@ -39,24 +39,22 @@ function common(a: Uint8Array, b: Uint8Array): number {
 	return i;
 }
 
-export function findValue(
+export function findLeaf(
 	node: MaybeNode,
 	path: Uint8Array
-): Uint8Array | undefined {
+): LeafNode | undefined {
 	if (!node) return;
 	if (isBranch(node)) {
-		if (path.length)
-			return findValue(node.children[path[0]], path.subarray(1));
+		if (path.length) {
+			return findLeaf(node.children[path[0]], path.subarray(1));
+		}
 	} else if (isExtension(node)) {
 		const n = node.path.length;
-		if (
-			path.length >= n &&
-			!Buffer.compare(node.path, path.subarray(0, n))
-		) {
-			return findValue(node.child, path.subarray(n));
+		if (path.length >= n && !Buffer.compare(node.path, path.subarray(0, n))) {
+			return findLeaf(node.child, path.subarray(n));
 		}
 	} else if (!Buffer.compare(node.path, path)) {
-		return node.value;
+		return node;
 	}
 }
 
@@ -69,15 +67,14 @@ export function findValue(
 export function insertNode(
 	node: MaybeNode,
 	path: Uint8Array,
-	value?: Uint8Array
+	value: Uint8Array
 ): Node {
 	if (!node) {
 		return newLeaf(path, value);
 	} else if (isBranch(node)) {
 		const i = path[0];
 		const children = node.children.slice();
-		const child = insertNode(children[i], path.subarray(1), value);
-		children[i] = child;
+		children[i] = insertNode(children[i], path.subarray(1), value);
 		return { children };
 	} else if (isExtension(node)) {
 		const other = node.path;
@@ -112,8 +109,8 @@ export function insertNode(
 	}
 }
 
-function newLeaf(path: Uint8Array, value?: Uint8Array): LeafNode {
-	if (!value?.length) {
+function newLeaf(path: Uint8Array, value: Uint8Array): LeafNode {
+	if (!value.length) {
 		value = EMPTY_BYTES;
 		if (!path.length) return EMPTY_LEAF;
 	} else if (value[0] === 0) {

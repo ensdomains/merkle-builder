@@ -35,7 +35,7 @@ describe("registrar", () => {
 			);
 		}
 
-		const storageHash = await getStorageHash(F.provider, registrar.target);
+		const storageHash = await getStorageHash(F, registrar.target);
 
 		expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
 	});
