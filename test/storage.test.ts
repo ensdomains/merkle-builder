@@ -8,7 +8,8 @@ import {
 } from "../src/trie.js";
 import { keccak256, toBigInt, toBytes, toHex } from "../src/utils.js";
 import { insertBytes } from "../src/kv.js";
-import { getStorageHash, randomBytes, randomInt, randomTrie } from "./utils.js";
+import { randomBytes, randomInt, randomTrie } from "./utils.js";
+import { ethGetProof } from "./rpc.js";
 
 describe("storage", () => {
 	let F: Foundry;
@@ -17,11 +18,9 @@ describe("storage", () => {
 	});
 	afterAll(() => F?.shutdown());
 
-	const N = 0;
-
 	test("empty", async () => {
 		const C = await F.deploy(`contract X {}`);
-		const storageHash = await getStorageHash(F, C.target);
+		const { storageHash } = await ethGetProof(F, C.target);
 		expect(toHex(getRootHash(undefined))).toStrictEqual(storageHash);
 	});
 
@@ -50,7 +49,7 @@ describe("storage", () => {
 		}`);
 		const v = randomBytes(31);
 		await F.confirm(C.set(v));
-		const storageHash = await getStorageHash(F, C.target);
+		const { storageHash } = await ethGetProof(F, C.target);
 		const key = toBytes(0, 32);
 		let node = undefined;
 		node = insertNode(node, toNibblePath(keccak256(key)), toBytes(header));
@@ -69,7 +68,7 @@ describe("storage", () => {
 		const v2 = randomBytes(v1.length >> 1); // smaller
 		await F.confirm(C.set(v1));
 		await F.confirm(C.set(v2));
-		const storageHash = await getStorageHash(F, C.target);
+		const { storageHash } = await ethGetProof(F, C.target);
 		const key = toBytes(0, 32);
 		let node = undefined;
 		node = insertBytes(node, key, v1);
@@ -78,24 +77,24 @@ describe("storage", () => {
 	});
 
 	describe("sstore", () => {
-		for (let i = 0; i < N; ++i) {
+		for (let i = 0; i < 10; ++i) {
 			const { node, storage } = randomTrie();
 			test(`#${i} x ${storage.length}`, async () => {
-				const contract = await F.deploy(`contract X {
+				const C = await F.deploy(`contract X {
 					constructor() {
 						assembly {
 							${storage.map(([k, v]) => `sstore(${toBigInt(k)}, ${toBigInt(v)})`).join("\n")}
 						}
 					}	
 				}`);
-				const storageHash = await getStorageHash(F, contract.target);
+				const { storageHash } = await ethGetProof(F, C.target);
 				expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
 			});
 		}
 	});
 
 	describe("bytes", () => {
-		for (let i = 0; i < N; ++i) {
+		for (let i = 0; i < 10; ++i) {
 			const length = randomInt(50);
 			test(`bytes #${i} x ${length}`, async () => {
 				const C = await F.deploy(`contract X {
@@ -119,7 +118,7 @@ describe("storage", () => {
 						kv.map((x) => x[1])
 					)
 				);
-				const storageHash = await getStorageHash(F, C.target);
+				const { storageHash } = await ethGetProof(F, C.target);
 				const node = kv.reduce<MaybeNode>(
 					(a, [k, v]) => insertBytes(a, k, v),
 					undefined

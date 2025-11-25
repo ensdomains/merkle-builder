@@ -16,11 +16,11 @@ export function trimLeadingZeros(v: Uint8Array): Uint8Array {
 }
 
 export function toBytes(x: string | number | bigint, w?: number): Uint8Array {
-	if (typeof x === 'string') {
+	if (typeof x === "string") {
 		if (!/^0x[0-9a-f]*$/i.test(x)) throw new Error(`expected hex: ${x}`);
 		x = x.slice(2);
 	} else {
-		x = x ? x.toString(16) : ""
+		x = x ? x.toString(16) : "";
 	}
 	w ??= (x.length + 1) >> 1;
 	return Buffer.from(x.padStart(w << 1, "0"), "hex");
@@ -34,5 +34,5 @@ export function toBigInt(v: Uint8Array): bigint {
 }
 
 export function toHex(v: Uint8Array) {
-	return '0x' + Buffer.from(v).toString('hex');
+	return "0x" + Buffer.from(v).toString("hex");
 }

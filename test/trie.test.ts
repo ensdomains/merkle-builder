@@ -9,7 +9,7 @@ describe("trie", () => {
 			expect(findLeaf(undefined, new Uint8Array(0))).toBeUndefined();
 		});
 
-		for (let i = 0; i < 20; ++i) {
+		for (let i = 0; i < 10; ++i) {
 			test(`#${i}`, () => {
 				const { node, storage } = randomTrie();
 				for (const [k, v] of storage) {

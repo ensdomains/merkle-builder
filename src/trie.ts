@@ -2,7 +2,7 @@ import { keccak256, toHex } from "./utils.js";
 
 type LeafNode = { path: Uint8Array; value: Uint8Array };
 type ExtensionNode = { path: Uint8Array; child: Node };
-type BranchNode = { children: MaybeNode[] };
+type BranchNode = { children: MaybeNode[], cache?: Uint8Array };
 
 export type Node = LeafNode | ExtensionNode | BranchNode;
 export type MaybeNode = Node | undefined;
@@ -58,11 +58,26 @@ export function findLeaf(
 	}
 }
 
-// function nibbleAt(path: Uint8Array, index: number) {
-// 	const nibble = path[index];
-// 	if (nibble >= 0 && nibble < 16) return nibble;
-// 	throw new Error(`invalid path: [${[...path]}] @ ${index}`);
-// }
+export function getProof(node: MaybeNode, path: Uint8Array): Uint8Array[] {
+	if (!node) return [RLP_NULL];
+	const ret: Uint8Array[] = [];
+	while (node) {
+		ret.push(encodeNode(node));
+		if (isBranch(node)) {
+			if (!path.length) throw new Error('bug');
+			node = node.children[path[0]];
+			path = path.subarray(1)
+		} else if (isExtension(node)) {
+			const n = node.path.length;
+			if (path.length < n || Buffer.compare(node.path, path.subarray(0, n))) break;
+			node = node.child;
+			path = path.subarray(n);
+		} else {
+			break;
+		}
+	}
+	return ret;
+}
 
 export function insertNode(
 	node: MaybeNode,
@@ -127,7 +142,7 @@ export function encodeNode(node: MaybeNode): Uint8Array {
 	if (!node) {
 		return RLP_NULL;
 	} else if (isBranch(node)) {
-		return encodeRlpList([...node.children.map(encodeNodeRef), RLP_NULL]);
+		return node.cache ??= encodeRlpList([...node.children.map(encodeNodeRef), RLP_NULL]);
 	} else if (isExtension(node)) {
 		return encodeRlpList([
 			encodeRlpBytes(encodePath(node.path, false)),
