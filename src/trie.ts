@@ -59,12 +59,11 @@ export function findLeaf(
 }
 
 export function getProof(node: MaybeNode, path: Uint8Array): Uint8Array[] {
-	if (!node) return [RLP_NULL];
 	const ret: Uint8Array[] = [];
-	while (node) {
+	do {
 		ret.push(encodeNode(node));
 		if (isBranch(node)) {
-			if (!path.length) throw new Error('bug');
+			if (!path.length) break;
 			node = node.children[path[0]];
 			path = path.subarray(1)
 		} else if (isExtension(node)) {
@@ -75,7 +74,7 @@ export function getProof(node: MaybeNode, path: Uint8Array): Uint8Array[] {
 		} else {
 			break;
 		}
-	}
+	} while (node);
 	return ret;
 }
 
