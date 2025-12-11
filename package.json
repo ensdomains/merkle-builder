@@ -14,7 +14,6 @@
 		"@adraffy/keccak": "^1.3.4"
 	},
 	"scripts": {
-		"demo": "bun test/demo/op.ts",
 		"fuzz": "while true; do bun test test/storage.test.ts; done"
 	}
 }
