@@ -1,4 +1,4 @@
-import { keccak256, toHex } from "./utils.js";
+import { concat, keccak256, toHex } from "./utils.js";
 
 type LeafNode = { path: Uint8Array; value: Uint8Array };
 type ExtensionNode = { path: Uint8Array; child: Node };
@@ -33,12 +33,14 @@ export function isEmptyLeaf(node: MaybeNode) {
 	return isLeaf(node) && !node.path.length && !node.value.length;
 }
 
+// return common prefix length
 function common(a: Uint8Array, b: Uint8Array): number {
 	let i = 0;
 	while (i < a.length && i < b.length && a[i] === b[i]) ++i;
 	return i;
 }
 
+// return length of prefix if path starts with prefix, otherwise 0
 function startsWith(path: Uint8Array, prefix: Uint8Array): number {
 	const n = prefix.length;
 	if (path.length < n) return 0;
@@ -50,18 +52,21 @@ export function findLeaf(
 	node: MaybeNode,
 	path: Uint8Array
 ): LeafNode | undefined {
-	if (!node) return;
-	if (isBranch(node)) {
-		if (path.length) {
-			return findLeaf(node.children[path[0]], path.subarray(1));
+	while (node) {
+		if (isBranch(node)) {
+			if (!path.length) return;
+			node = node.children[path[0]];
+			path = path.subarray(1);
+		} else if (isExtension(node)) {
+			const i = startsWith(path, node.path);
+			if (!i) return;
+			node = node.child;
+			path = path.subarray(i);
+		} else if (startsWith(path, node.path)) {
+			return node;
+		} else {
+			return;
 		}
-	} else if (isExtension(node)) {
-		const i = startsWith(path, node.path);
-		if (i) {
-			return findLeaf(node.child, path.subarray(i));
-		}
-	} else if (startsWith(path, node.path)) {
-		return node;
 	}
 }
 
@@ -159,7 +164,7 @@ export function deleteNode(node: MaybeNode, path: Uint8Array): MaybeNode {
 		const child = deleteNode(node.child, path.subarray(i));
 		if (!child) return; // deleted
 		if (isBranch(child)) return { path: node.path, child }; // same structure
-		path = Buffer.concat([node.path, child.path]);
+		path = concat(node.path, child.path);
 		return isExtension(child)
 			? { path, child: child.child } // double extension
 			: newLeaf(path, child.value);
@@ -256,17 +261,17 @@ function encodeRlpLength(start: number, length: number): Uint8Array {
 }
 
 function encodeRlpList(m: Uint8Array[]): Uint8Array {
-	return Buffer.concat([
+	return concat(
 		encodeRlpLength(
 			0xc0,
 			m.reduce((a, x) => a + x.length, 0)
 		),
-		...m,
-	]);
+		...m
+	);
 }
 
 function encodeRlpBytes(v: Uint8Array): Uint8Array {
 	const max = 0x80;
 	if (v.length == 1 && v[0] < max) return v;
-	return Buffer.concat([encodeRlpLength(max, v.length), v]);
+	return concat(encodeRlpLength(max, v.length), v);
 }

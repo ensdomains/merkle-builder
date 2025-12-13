@@ -14,6 +14,8 @@ const TY_EXTENSION = 2;
 const TY_EMPTY_LEAF = 3;
 const TY_LEAF = 4;
 
+export const MAX_LENGTH = (1 << 22) - 1; // 4194304
+
 export class Coder {
 	public pos = 0;
 	constructor(public buf: Uint8Array = new Uint8Array(1024)) {}
@@ -39,6 +41,33 @@ export class Coder {
 		this.expand(1);
 		this.buf[this.pos++] = x;
 	}
+	readLength() {
+		let i = this.readByte();
+		if (i & 128) {
+			const next = this.readByte();
+			i = (i & 127) + ((next & 127) << 7);
+			if (next & 128) {
+				i += this.readByte() << 14;
+			}
+		}
+		return i;
+	}
+	writeLength(i: number) {
+		if (i < 128) {
+			this.writeByte(i);
+		} else {
+			this.writeByte(i | 128);
+			i >>= 7;
+			if (i < 128) {
+				this.writeByte(i);
+			} else {
+				this.writeByte(i | 128);
+				i >>= 7;
+				if (i >> 8) throw new RangeError("overflow");
+				this.writeByte(i);
+			}
+		}
+	}
 	readBytes(n: number) {
 		if (!n) return EMPTY_BYTES;
 		this.require(n);
@@ -48,14 +77,6 @@ export class Coder {
 		this.expand(v.length);
 		this.buf.set(v, this.pos);
 		this.pos += v.length;
-	}
-	readSmallBytes() {
-		return this.readBytes(this.readByte());
-	}
-	writeSmallBytes(v: Uint8Array) {
-		this.expand(1 + v.length);
-		this.writeByte(v.length);
-		this.writeBytes(v);
 	}
 	readPath() {
 		const n = this.readByte();
@@ -89,7 +110,7 @@ export class Coder {
 			case TY_LEAF:
 				return {
 					path: this.readPath(),
-					value: this.readSmallBytes(),
+					value: this.readBytes(this.readLength()),
 				};
 			default:
 				throw new Error(`unknown type: ${ty}`);
@@ -112,7 +133,8 @@ export class Coder {
 		} else {
 			this.writeByte(TY_LEAF);
 			this.writePath(node.path);
-			this.writeSmallBytes(node.value);
+			this.writeLength(node.value.length);
+			this.writeBytes(node.value);
 		}
 	}
 	get bytes() {

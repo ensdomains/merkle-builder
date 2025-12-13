@@ -33,7 +33,7 @@ export function insertBytes(
 	}
 	let pos = 0;
 	if (value.length < 32) {
-		if (!value.length && mode == "delete") {
+		if (!value.length && mode === "delete") {
 			node = deleteNode(node, path);
 		} else {
 			const word = bytes32(value);
@@ -67,7 +67,7 @@ export function insertBytes(
 	}
 	return node;
 }
-
+ 
 function inc(v: Uint8Array, max = 255) {
 	let i = v.length;
 	while (i && v[i - 1] === max) --i;

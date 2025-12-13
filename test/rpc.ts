@@ -1,19 +1,19 @@
-import { toHex } from "../src/utils.js";
+import { type Hex, toHex } from "../src/utils.js";
 
 export type EthStorageProof = {
-	key: string;
-	value: string;
-	proof: string[];
+	key: Hex;
+	value: Hex;
+	proof: Hex[];
 };
 export type EthGetProof = {
-	address: string;
-	storageHash: string;
+	address: Hex;
+	storageHash: Hex;
 	storageProof: EthStorageProof[];
 };
 
 // partial eth_getProof helper
 export async function ethGetProof(
-	provider: { send(address: string, params: any[]): Promise<any> },
+	provider: { send(method: string, params: any[]): Promise<any> },
 	address: string,
 	slots: Uint8Array[] = [],
 	blockTag = "latest"

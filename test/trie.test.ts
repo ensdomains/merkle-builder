@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { deleteNode, findLeaf, insertNode, isBranch, isExtension, isLeaf, toNibblePath } from "../src/trie.js";
+import {
+	deleteNode,
+	findLeaf,
+	insertNode,
+	isBranch,
+	isExtension,
+	isLeaf,
+	toNibblePath,
+} from "../src/trie.js";
 import { keccak256 } from "../src/utils.js";
 import { randomTrie } from "./utils.js";
 
