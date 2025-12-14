@@ -30,8 +30,13 @@ describe("trie", () => {
 	});
 
 	describe("deleteNode", () => {
+		//  _  = branch
+		// [_] = leaf
+		// (_) = extension
+		//  *  = deleted
+
 		test("delete leaf by prefix", () => {
-			//     []     ==>   null
+			//    root     ==>   null
 			//     /
 			//    0*
 			//   / \
@@ -43,7 +48,7 @@ describe("trie", () => {
 		});
 
 		test("delete branch by prefix", () => {
-			//      []    ==>   [11]
+			//     root   ==>   [11]
 			//     /  \
 			//    0*   1
 			//   / \    \
@@ -60,7 +65,7 @@ describe("trie", () => {
 		});
 
 		test("collapse branch", () => {
-			//      []     ==>    (1)
+			//     root    ==>    (1)
 			//     /  \           /  \
 			//    0*   1        [0]  [1]
 			//   /    / \
@@ -78,7 +83,7 @@ describe("trie", () => {
 		});
 
 		test("delete extension by prefix", () => {
-			//      []     ==>   null
+			//     root    ==>   null
 			//     /
 			//   (0)*
 			//   / \
@@ -91,7 +96,7 @@ describe("trie", () => {
 		});
 
 		test("collapse extension", () => {
-			//      []     ==>   (01)
+			//     root    ==>    [01]
 			//     /
 			//   (0)
 			//   /  \
