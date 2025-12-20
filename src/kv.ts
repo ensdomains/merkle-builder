@@ -8,7 +8,10 @@ import {
 } from "./trie.js";
 import { toBigInt, toBytes, keccak256, trimLeadingZeros } from "./utils.js";
 
-export type InsertMode = "zero" | "delete" | undefined;
+export type InsertMode =
+	| "zero" // overwrite prior slots with 0
+	| "delete" // remove prior slots from trie
+	| "ignore"; // do nothing
 
 export function insertBytes(
 	node: MaybeNode,
@@ -20,15 +23,13 @@ export function insertBytes(
 	const key = keccak256(slot);
 	const path = toNibblePath(key);
 	let oldSize = 0;
-	if (mode) {
+	if (mode !== "ignore") {
 		const prior = findLeaf(node, path)?.value;
-		if (prior?.length) {
-			const header = toBigInt(prior);
-			if (header & 1n) {
-				oldSize = Number(header >> 1n);
-				// if this is too large, likely theres an encoding error
-				// evm will run out of gas trying to clear it
-			}
+		if (prior?.length && prior[prior.length - 1] & 1) {
+			// small bytes can be ignored since the header is replaced
+			oldSize = Number(toBigInt(prior) >> 1n);
+			// if this is too large, likely theres an encoding error
+			// evm will run out of gas trying to clear it
 		}
 	}
 	let pos = 0;
@@ -67,7 +68,7 @@ export function insertBytes(
 	}
 	return node;
 }
- 
+
 function inc(v: Uint8Array, max = 255) {
 	let i = v.length;
 	while (i && v[i - 1] === max) --i;

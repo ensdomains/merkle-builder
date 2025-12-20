@@ -70,15 +70,15 @@ function pow2(x: bigint): bigint {
 	return (x * x) % FIELD;
 }
 
-export function mimcHash(v: bigint[]) {
-    let h = 0n;
-    for (const x of v) {
-        let y = x;
-        for (const c of ROUND_CONSTANTS) {
-            const temp = (y + h + c) % FIELD;
-            y = pow2(pow2(pow2(pow2(temp)))) * temp;
-        }
-        h += x + y + h;
-    }
-    return h % FIELD;
+export function mimcHash(v: bigint[]): bigint {
+	let h = 0n;
+	for (const x of v) {
+		let y = x;
+		for (const c of ROUND_CONSTANTS) {
+			const temp = (y + h + c) % FIELD;
+			y = pow2(pow2(pow2(pow2(temp)))) * temp;
+		}
+		h += x + y + h;
+	}
+	return h % FIELD;
 }

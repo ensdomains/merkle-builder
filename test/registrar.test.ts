@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
 import { getRootHash, type MaybeNode } from "../src/trie.js";
 import { insertBytes } from "../src/kv.js";
@@ -6,12 +6,9 @@ import { toBytes, followSlot, toHex } from "../src/utils.js";
 import { randomBytes, randomInt } from "./utils.js";
 import { ethGetProof } from "./rpc.js";
 
-describe("registrar", () => {
-	let F: Foundry;
-	beforeAll(async () => {
-		F = await Foundry.launch({ infoLog: false }); // enable to show events
-	});
-	afterAll(() => F?.shutdown());
+describe("registrar", async () => {
+	const F = await Foundry.launch({ infoLog: false }); // enable to show events
+	afterAll(F.shutdown);
 
 	test("setName", async () => {
 		const C = await F.deploy({

@@ -24,7 +24,6 @@ import {
 } from "../test/rpc.js";
 import { Database } from "bun:sqlite";
 
-const REGISTRAR = "0x0000000000D8e504002cC26E3Ec46D81971C1664";
 const REGISTRAR_ABI = new Interface([
 	`function owner() view returns (address)`,
 	`event NameForAddrChanged(address indexed addr, string name)`,
@@ -108,10 +107,13 @@ function determineProvider(info: ChainInfo) {
 }
 
 const chainInfo = determineChain(args.values.chain);
+const registarAddress = chainInfo.testnet // https://docs.ens.domains/ensip/19/#annex-supported-chains
+	? "0x00000BeEF055f7934784D6d81b6BC86665630dbA"
+	: "0x0000000000D8e504002cC26E3Ec46D81971C1664"
 const realProviderURL = determineProvider(chainInfo);
 
 console.log(`Chain: ${chainInfo.name.toUpperCase()} (${chainInfo.id})`);
-console.log(`Contract: ${chainInfo.explorer}/address/${REGISTRAR}`);
+console.log(`Contract: ${chainInfo.explorer}/address/${registarAddress}`);
 console.log(`Public RPC: ${chainInfo.publicRPC}`);
 console.log(`Prover RPC: ${realProviderURL}`);
 
@@ -178,7 +180,7 @@ const realProvider = new JsonRpcProvider(realProviderURL, chainInfo.id, {
 	batchMaxCount: 1,
 });
 
-const registrar = new Contract(REGISTRAR, REGISTRAR_ABI, realProvider);
+const registrar = new Contract(registarAddress, REGISTRAR_ABI, realProvider);
 
 const blockTag = `0x${(block0 - 1).toString(16)}`;
 
@@ -201,11 +203,9 @@ const fakeProvider: RawProvider = {
 	async send(method, params) {
 		switch (method) {
 			case "eth_getProof": {
-				const hexSlots = params[1];
-				if (!Array.isArray(hexSlots)) throw new Error(`expected slots`);
 				console.time("getProof");
-				const storageProof = hexSlots.map((hexSlot) => {
-					const slot = toBytes(hexSlot, 32);
+				const storageProof = params[1].map((hex: string) => {
+					const slot = toBytes(hex, 32);
 					const path = toNibblePath(keccak256(slot));
 					const leaf = findLeaf(node, path);
 					return {
@@ -216,7 +216,7 @@ const fakeProvider: RawProvider = {
 				});
 				console.timeEnd("getProof");
 				return {
-					address: REGISTRAR.toLowerCase() as typeof REGISTRAR,
+					address: registarAddress.toLowerCase() as typeof registarAddress,
 					storageHash,
 					storageProof,
 				} satisfies EthGetProof;
@@ -244,27 +244,36 @@ const slots = [
 	getPrimarySlot("0x000000000000000000000000000000000000beef"), // dne
 ];
 
-const realProof = await ethGetProof(realProvider, REGISTRAR, slots, blockTag);
-const fakeProof = await ethGetProof(fakeProvider, REGISTRAR, slots, blockTag);
-
 const realStorage = await ethGetStorage(
 	realProvider,
-	REGISTRAR,
+	registarAddress,
 	slots[0],
 	blockTag
 );
 const fakeStorage = await ethGetStorage(
 	fakeProvider,
-	REGISTRAR,
+	registarAddress,
 	slots[0],
 	blockTag
 );
-
-console.log("eth_getProof Match:", extract(realProof) === extract(fakeProof));
 console.log(
 	"eth_getStorageAt Match:",
 	JSON.stringify(realStorage) === JSON.stringify(fakeStorage)
 );
+
+const realProof = await ethGetProof(
+	realProvider,
+	registarAddress,
+	slots,
+	blockTag
+);
+const fakeProof = await ethGetProof(
+	fakeProvider,
+	registarAddress,
+	slots,
+	blockTag
+);
+console.log("eth_getProof Match:", extract(realProof) === extract(fakeProof));
 
 db.close();
 process.exit(0);
@@ -283,7 +292,7 @@ async function sync() {
 	p.on("debug", (x) => {
 		if (x.action === "sendRpcPayload") calls++;
 	});
-	const registrar = new Contract(REGISTRAR, REGISTRAR_ABI, p);
+	const registrar = new Contract(registarAddress, REGISTRAR_ABI, p);
 	while (true) {
 		const t0 = Date.now();
 		let block1 = await p.getBlockNumber();

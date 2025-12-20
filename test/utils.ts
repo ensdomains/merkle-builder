@@ -9,7 +9,7 @@ export function dump(node: MaybeNode) {
 
 export { randomInt, randomBytes };
 
-export function randomTrie(size = randomInt(100)) {
+export function randomTrie(size = 1 + randomInt(100)) {
 	const dedup = new Map<string, [Uint8Array, Uint8Array]>();
 	while (dedup.size < size) {
 		const k = randomBytes(32);

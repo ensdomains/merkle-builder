@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
 import {
 	type MaybeNode,
@@ -12,12 +12,9 @@ import { insertBytes, type InsertMode } from "../src/kv.js";
 import { randomBytes, randomInt, randomTrie } from "./utils.js";
 import { ethGetProof } from "./rpc.js";
 
-describe("storage", () => {
-	let F: Foundry;
-	beforeAll(async () => {
-		F = await Foundry.launch({ infoLog: false });
-	});
-	afterAll(() => F?.shutdown());
+describe("storage", async () => {
+	const F = await Foundry.launch({ infoLog: false });
+	afterAll(F.shutdown);
 
 	const FUZZ = 20; // samples
 
@@ -108,14 +105,10 @@ describe("storage", () => {
 			test(`#${i} x ${storage.length}`, async () => {
 				const deletedIndex = (storage.length * Math.random()) | 0;
 				const [deletedKey] = storage[deletedIndex];
-				delete storage[deletedIndex];
+				storage.splice(deletedIndex, 1);
 				const C = await contractWithStorage(storage);
 				const { storageHash } = await ethGetProof(F.provider, C.target);
 				const node2 = deleteNode(node, toNibblePath(keccak256(deletedKey)));
-				// if (toHex(getRootHash(node2)) !== storageHash) {
-				// 	dump(node);
-				// 	dump(node2);
-				// }
 				expect(toHex(getRootHash(node2))).toStrictEqual(storageHash);
 			});
 		}

@@ -1,16 +1,13 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
 import { getProof, insertNode, toNibblePath } from "../src/trie.js";
 import { keccak256, toBigInt, toBytes, toHex } from "../src/utils.js";
 import { ethGetProof } from "./rpc.js";
 import { randomTrie } from "./utils.js";
 
-describe("proofs", () => {
-	let F: Foundry;
-	beforeAll(async () => {
-		F = await Foundry.launch({ infoLog: false });
-	});
-	afterAll(() => F?.shutdown());
+describe("proofs", async () => {
+	const F = await Foundry.launch({ infoLog: false });
+	afterAll(F.shutdown);
 
 	test("dne", async () => {
 		const C = await F.deploy(`contract X {}`);
