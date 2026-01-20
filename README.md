@@ -4,7 +4,7 @@
 * Matches [Ethereum](https://ethereum.org/developers/docs/apis/json-rpc/) and [Foundry](https://getfoundry.sh/) results
 * Memory efficient (copy-on-write, shared subexpressions)
 * Compute efficient (branch nodes hash once)
-* Multiple storage encodings (object, bytes, JSON)
+* Multiple storage encodings (object, [bytes](./src/coder.ts), [JSON](./src/json.ts))
 
 #### Roadmap
 
@@ -34,10 +34,10 @@
 
 * Replicate `eth_getProof` for [`L2ReverseRegistrar`](https://github.com/ensdomains/ens-contracts/blob/staging/contracts/reverseRegistrar/L2ReverseRegistrar.sol) (requires [`.env`](./.env.sample) for provider)
     * `bun demo/app.ts -c <chain>`
-        * ✅️ [`op`](https://optimistic.etherscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `88` names as of `2026-01-09`
-        * ✅️ [`base`](https://basescan.org/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `1,584,359` names as of `2026-01-09`
-        * ✅️ [`arb`](https://arbiscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `146` names as of `2025-01-09`
-        * ✅️ [`linea`](https://lineascan.build/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `74` names as of `2025-01-09`
-        * ✅️ [`scroll`](https://scrollscan.com/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `47` names as of `2025-01-09`
+        * ✅️ [`op`](https://optimistic.etherscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `93` names as of `2026-01-20`
+        * ✅️ [`base`](https://basescan.org/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `1,763,909` names as of `2026-01-20`
+        * ✅️ [`arb`](https://arbiscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `150` names as of `2026-01-20`
+        * ✅️ [`linea`](https://lineascan.build/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `76` names as of `2026-01-20`
+        * ✅️ [`scroll`](https://scrollscan.com/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `49` names as of `2026-01-20`
 * Deserialize from *trunk* and *limb* with precomputed hashes, perform surgery, and produce correct `eth_getProof`
     * `bun demo/memory.ts -c <chain> -d <depth>`

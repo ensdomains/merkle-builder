@@ -26,7 +26,7 @@ export function setOwner(node: MaybeNode, owner: Hex): MaybeNode {
 	return insertLeaf(node, OWNER_PATH, trimLeadingZeros(toBytes(owner)));
 }
 
-export function getPrimarySlot(addr: Hex) {
+export function getPrimarySlot(addr: Hex): Uint8Array {
 	return followSlot(SLOT_NAMES, toBytes(addr, 32));
 }
 

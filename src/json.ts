@@ -21,8 +21,8 @@ export function toJSON(node: MaybeNode, depth = Infinity): any {
 	if (isBranch(node)) {
 		return Object.fromEntries(
 			node.children.flatMap((x, i) =>
-				x ? [[toNibbleChar(i), x && toJSON(x, depth - 1)]] : []
-			)
+				x ? [[toNibbleChar(i), x && toJSON(x, depth - 1)]] : [],
+			),
 		);
 	} else if (isExtension(node)) {
 		return [nibbleStr(node.path), toJSON(node.child, depth - 1)];
@@ -58,7 +58,7 @@ export function fromJSON(json: any): MaybeNode {
 			}
 		}
 	}
-	throw new TypeError("invalid json");
+	throw Object.assign(new TypeError("invalid json"), { json });
 }
 
 function nibbleStr(path: Iterable<number>) {

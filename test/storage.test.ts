@@ -9,7 +9,7 @@ import {
 } from "../src/trie.js";
 import { keccak256, toBigInt, toBytes, toHex } from "../src/utils.js";
 import { insertBytes, type InsertMode } from "../src/kv.js";
-import { randomBytes, randomInt, randomTrie } from "./utils.js";
+import { randomBytes, randomInt, randomTrie, type TrieEntry } from "./utils.js";
 import { ethGetProof } from "./rpc.js";
 
 describe("storage", async () => {
@@ -34,7 +34,7 @@ describe("storage", async () => {
 					assembly { sstore(0, 10000001) }
 					slot0 = '';
 				}
-			}`)
+			}`),
 		).rejects.toThrow();
 	});
 
@@ -78,9 +78,7 @@ describe("storage", async () => {
 		expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
 	});
 
-	function contractWithStorage(
-		storage: [Uint8Array, Uint8Array, Uint8Array][]
-	) {
+	function contractWithStorage(storage: TrieEntry[]) {
 		return F.deploy(`contract X {
 			constructor() {
 				assembly {
@@ -137,13 +135,13 @@ describe("storage", async () => {
 				await F.confirm(
 					C.set(
 						kv.map((x) => x[0]),
-						kv.map((x) => x[1])
-					)
+						kv.map((x) => x[1]),
+					),
 				);
 				const { storageHash } = await ethGetProof(F.provider, C.target);
 				const node = kv.reduce<MaybeNode>(
 					(a, [k, v]) => insertBytes(a, k, v, mode),
-					undefined
+					undefined,
 				);
 				expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
 			});

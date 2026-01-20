@@ -13,9 +13,8 @@ import { concat } from "./utils.js";
 type Limb = [path: Uint8Array, node: Node];
 
 // node is mutated, which preserves precomputed hashes, avoid with copyNode
-// trunc is almost always node unless node exists entirely inside of the pluck envelope
-// limb paths are copied
-// limb nodes are references
+// trunc is almost always node unless node exists entirely outside of the pluck envelope
+// limb paths and nodes are references
 export function pluckLimbs(
 	node: MaybeNode,
 	depth: number
@@ -42,8 +41,6 @@ export function pluckLimbs(
 			trunk: undefined,
 			limbs: [[node.path.subarray(0, depth), leaf]],
 		};
-	} else {
-		return { trunk: node, limbs: [] };
 	}
 	const limbs: Limb[] = [];
 	while (queue.length) {

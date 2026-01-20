@@ -107,8 +107,8 @@ export class Coder {
 			this.buf[this.pos++] = (v[i] << 4) | (v[i + 1] ?? 0);
 		}
 	}
-	readChildren(): MaybeNode[] {
-		return Array.from({ length: 16 }, () => this.readNode());
+	readNodes(length = 16): MaybeNode[] {
+		return Array.from({ length }, () => this.readNode());
 	}
 	readNode(): MaybeNode {
 		const ty = this.readByte();
@@ -117,13 +117,11 @@ export class Coder {
 				return;
 			case TY_BRANCH_WITH_CACHE:
 				return {
-					children: this.readChildren(),
+					children: this.readNodes(),
 					cache: this.readSizedBytes(),
 				};
 			case TY_BRANCH:
-				return {
-					children: Array.from({ length: 16 }, () => this.readNode()),
-				};
+				return { children: this.readNodes() };
 			case TY_EXTENSION: {
 				const path = this.readPath();
 				const child = this.readNode();

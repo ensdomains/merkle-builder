@@ -135,3 +135,9 @@ function formatBytes(size: number) {
 	size /= 1024;
 	return `${size.toFixed(1)}MB`;
 }
+
+// 20250109: `-c base`
+// depth | speed | limbs |   size |   trunk |   limb
+//     2 |  4 ms |   256 | 185 mb |   10 kb | 750 kb
+//     3 |  1 ms |  4096 | 180 mb |  150 kb |  52 kb ==> best
+//     4 |  1 ms | 65536 | 250 mb | 2300 kb |   6 kb
