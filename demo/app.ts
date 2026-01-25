@@ -1,12 +1,6 @@
 import { parseArgs } from "node:util";
 import { Database } from "bun:sqlite";
-import {
-	Contract,
-	EventLog,
-	Interface,
-	isError,
-	JsonRpcProvider,
-} from "ethers";
+import { Contract, EventLog, isError, JsonRpcProvider } from "ethers";
 import {
 	findLeaf,
 	getProof,
@@ -29,17 +23,14 @@ import {
 	getPrimarySlot,
 	getRegistrarAddress,
 	KNOWN_ADDRS,
+	REGISTRAR_ABI,
 	setOwner,
 } from "./registrar.js";
-
-const REGISTRAR_ABI = new Interface([
-	`function owner() view returns (address)`,
-	`event NameForAddrChanged(address indexed addr, string name)`,
-]);
 
 const args = parseArgs({
 	options: {
 		chain: { type: "string", short: "c" },
+		noSync: { type: "boolean" },
 	},
 	strict: true,
 });
@@ -107,7 +98,9 @@ process.once("SIGINT", () => {
 	process.exit();
 });
 
-await sync();
+if (!args.values.noSync) {
+	await sync();
+}
 
 const realProvider = new JsonRpcProvider(realRPC, chainInfo.id, {
 	staticNetwork: true,

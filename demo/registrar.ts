@@ -1,3 +1,4 @@
+import { Interface } from "ethers";
 import { insertLeaf, toNibblePath, type MaybeNode } from "../src/trie.js";
 import {
 	followSlot,
@@ -17,6 +18,11 @@ export function getRegistrarAddress(testnet?: boolean) {
 // https://github.com/ensdomains/ens-contracts/blob/staging/contracts/reverseRegistrar/StandaloneReverseRegistrar.sol
 // https://github.com/ensdomains/ens-contracts/blob/staging/contracts/reverseRegistrar/L2ReverseRegistrar.sol
 // https://github.com/ensdomains/ens-contracts/blob/staging/contracts/reverseRegistrar/L2ReverseRegistrarWithMigration.sol
+
+export const REGISTRAR_ABI = new Interface([
+	`function owner() view returns (address)`,
+	`event NameForAddrChanged(address indexed addr, string name)`,
+]);
 
 const SLOT_NAMES = 0n;
 const SLOT_OWNER = 1n;

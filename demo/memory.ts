@@ -32,14 +32,15 @@ console.log(`Depth: ${depth}`);
 
 const db = new Database(`${import.meta.dir}/${chainInfo.name}.sqlite`);
 
+console.log(
+	`Names: ${db.query("SELECT count(block) FROM names").values()[0][0]}`,
+);
+
 let node: MaybeNode;
 console.time("rebuildTrie");
 for (const row of db
 	.query<
-		{
-			addr: Uint8Array;
-			name: Uint8Array;
-		},
+		{ addr: Uint8Array; name: Uint8Array },
 		[]
 	>("SELECT * FROM names ORDER BY rowid")
 	.iterate()) {
@@ -70,7 +71,7 @@ console.log(
 
 // coder
 const coder = new Coder();
-console.time('write');
+console.time("write");
 coder.writeNode(trunk);
 coder.writeSize(depth);
 coder.writeSize(limbs.length);
@@ -78,8 +79,8 @@ for (const [path, node] of limbs) {
 	coder.writeBytes(path);
 	coder.writeNode(node);
 }
-console.timeEnd('write');
-console.time('read');
+console.timeEnd("write");
+console.time("read");
 coder.reset();
 const trunk2 = coder.readNode();
 const depth2 = coder.readSize();
@@ -87,7 +88,7 @@ const limbs2 = Array.from({ length: coder.readSize() }, () => [
 	coder.readBytes(depth2),
 	coder.readNode(),
 ]);
-console.timeEnd('read');
+console.timeEnd("read");
 console.log("Coder:", {
 	sameTrunk: deepEquals(trunk, trunk2),
 	sameLimbs: deepEquals(limbs, limbs2),
@@ -95,9 +96,7 @@ console.log("Coder:", {
 
 // join
 const copy = limbs.reduce((a, x) => graftLimb(a, ...x), copyNode(trunk));
-console.log(
-	`Reproduce StorageHash: ${toHex(getRootHash(copy)) === storageHash}`,
-);
+console.log(`Reproduce StorageHash: ${deepEquals(node, copy)}`);
 
 // load sql
 const mem = new Database();

@@ -1,6 +1,7 @@
 import {
 	isBranch,
 	isExtension,
+	isLeaf,
 	newLeaf,
 	type BranchNode,
 	type MaybeNode,
@@ -17,7 +18,8 @@ type Limb = [path: Uint8Array, node: Node];
 // limb paths and nodes are references
 export function pluckLimbs(
 	node: MaybeNode,
-	depth: number
+	depth: number,
+	exact?: boolean,
 ): { trunk: MaybeNode; limbs: Limb[] } {
 	if (!node || depth <= 0) return { trunk: node, limbs: [] };
 	const queue: [parent: BranchNode, path: number[]][] = [];
@@ -45,24 +47,31 @@ export function pluckLimbs(
 	const limbs: Limb[] = [];
 	while (queue.length) {
 		const [parent, path] = queue.pop()!;
-		const rest = depth - path.length - 1;
 		parent.children.forEach((child, i) => {
 			if (!child) return;
-			if (!rest) {
+			if (path.length + 1 === depth) {
 				parent.children[i] = undefined;
 				limbs.push([Uint8Array.of(...path, i), child]);
 			} else if (isBranch(child)) {
 				queue.push([child, [...path, i]]);
-			} else if (child.path.length > rest) {
-				parent.children[i] = undefined;
-				const copy = { ...child };
-				copy.path = child.path.subarray(rest);
-				limbs.push([
-					Uint8Array.of(...path, i, ...child.path.subarray(0, rest)),
-					copy,
-				]);
-			} else if (isExtension(child)) {
+			} else if (
+				isExtension(child) &&
+				path.length + child.path.length <= depth
+			) {
 				queue.push([child.child, [...path, i, ...child.path]]);
+			} else if (exact) {
+				// 20260125: excluding leaf/ext from trunk causes wrong negative proofs
+				parent.children[i] = undefined;
+				const full = [...path, i, ...child.path];
+				const rest = new Uint8Array(full.slice(depth));
+				limbs.push([
+					new Uint8Array(full.slice(0, depth)),
+					isLeaf(child)
+						? newLeaf(rest, child.data)
+						: rest.length
+							? { path: rest, child: child.child }
+							: child.child,
+				]);
 			}
 		});
 	}
@@ -75,7 +84,7 @@ export function pluckLimbs(
 export function graftLimb(
 	trunk: MaybeNode,
 	path: Uint8Array,
-	limb: Node
+	limb: Node,
 ): Node {
 	if (!path.length) return limb; // technically invalid Limb
 	if (!trunk) {
