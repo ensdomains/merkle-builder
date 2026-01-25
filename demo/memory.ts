@@ -19,7 +19,7 @@ import { graftLimb, pluckLimbs } from "../src/surgery.js";
 const args = parseArgs({
 	options: {
 		chain: { type: "string", short: "c" },
-		depth: { type: "string", short: "d", default: "2" },
+		depth: { type: "string", short: "d", default: "3" },
 	},
 	strict: true,
 });
@@ -64,27 +64,52 @@ console.log(`LimbCount: ${limbs.length}`);
 console.log(`Trunk Size: ${formatBytes(Coder.getByteCount(trunk))}`);
 console.log(
 	`Max Limb Size: ${formatBytes(
-		limbs.reduce((a, x) => Math.max(a, Coder.getByteCount(x[1])), 0)
-	)}`
+		limbs.reduce((a, x) => Math.max(a, Coder.getByteCount(x[1])), 0),
+	)}`,
 );
+
+// coder
+const coder = new Coder();
+console.time('write');
+coder.writeNode(trunk);
+coder.writeSize(depth);
+coder.writeSize(limbs.length);
+for (const [path, node] of limbs) {
+	coder.writeBytes(path);
+	coder.writeNode(node);
+}
+console.timeEnd('write');
+console.time('read');
+coder.reset();
+const trunk2 = coder.readNode();
+const depth2 = coder.readSize();
+const limbs2 = Array.from({ length: coder.readSize() }, () => [
+	coder.readBytes(depth2),
+	coder.readNode(),
+]);
+console.timeEnd('read');
+console.log("Coder:", {
+	sameTrunk: deepEquals(trunk, trunk2),
+	sameLimbs: deepEquals(limbs, limbs2),
+});
 
 // join
 const copy = limbs.reduce((a, x) => graftLimb(a, ...x), copyNode(trunk));
 console.log(
-	`Reproduce StorageHash: ${toHex(getRootHash(copy)) === storageHash}`
+	`Reproduce StorageHash: ${toHex(getRootHash(copy)) === storageHash}`,
 );
 
 // load sql
 const mem = new Database();
 mem.run(`CREATE TABLE limbs (key BLOB PRIMARY KEY, value BLOB)`);
 const select = mem.prepare<{ value: Uint8Array }, Uint8Array>(
-	"SELECT value FROM limbs WHERE key = ?"
+	"SELECT value FROM limbs WHERE key = ?",
 );
 const insert = mem.prepare<void, [Uint8Array, Uint8Array]>(
-	"INSERT INTO limbs (key,value) VALUES(?,?)"
+	"INSERT INTO limbs (key,value) VALUES(?,?)",
 );
 const memory = mem.prepare<{ n: number }, []>(
-	`SELECT page_count * page_size AS n FROM pragma_page_count(), pragma_page_size()`
+	`SELECT page_count * page_size AS n FROM pragma_page_count(), pragma_page_size()`,
 );
 mem.transaction(() => {
 	const c = new Coder();
@@ -141,3 +166,7 @@ function formatBytes(size: number) {
 //     2 |  4 ms |   256 | 185 mb |   10 kb | 750 kb
 //     3 |  1 ms |  4096 | 180 mb |  150 kb |  52 kb ==> best
 //     4 |  1 ms | 65536 | 250 mb | 2300 kb |   6 kb
+
+// 20250125: `-c base -d 3`
+// [449.16ms] write
+// [838.35ms] read

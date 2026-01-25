@@ -20,6 +20,7 @@ import {
 	ethGetProof,
 	ethGetStorage,
 	type EthGetProof,
+	type EthStorageProof,
 	type RawProvider,
 } from "../test/rpc.js";
 import {
@@ -64,10 +65,10 @@ db.run(`CREATE TABLE IF NOT EXISTS names (
 )`);
 
 const insertName = db.prepare<unknown, [number, Uint8Array, Uint8Array]>(
-	"INSERT INTO names (block,addr,name) VALUES(?,?,?)"
+	"INSERT INTO names (block,addr,name) VALUES(?,?,?)",
 );
 const updateState = db.prepare<unknown, [string, string]>(
-	"REPLACE INTO state (key,value) VALUES(?,?)"
+	"REPLACE INTO state (key,value) VALUES(?,?)",
 );
 
 let node: MaybeNode = undefined;
@@ -78,7 +79,7 @@ if (1) {
 		db
 			.query<{ key: string; value: string }, []>("SELECT * FROM state")
 			.all()
-			.map((x) => [x.key, x.value])
+			.map((x) => [x.key, x.value]),
 	);
 	if (state.block0) {
 		block0 = Math.max(block0, parseInt(state.block0));
@@ -140,8 +141,8 @@ const fakeProvider: RawProvider = {
 					return {
 						key: toHex(slot),
 						value: leaf?.data.length ? toHex(leaf.data) : "0x0",
-						proof: getProof(node, path).map((v) => toHex(v)),
-					};
+						proof: getProof(node, path).map(toHex),
+					} satisfies EthStorageProof;
 				});
 				console.timeEnd("getProof");
 				return {
@@ -167,38 +168,43 @@ const fakeProvider: RawProvider = {
 	},
 };
 
-const slots = KNOWN_ADDRS.map((x) => getPrimarySlot(x));
+const slots = KNOWN_ADDRS.map(getPrimarySlot);
 
-const realStorage = await ethGetStorage(
-	realProvider,
-	registrarAddress,
-	slots[0],
-	blockTag
-);
-const fakeStorage = await ethGetStorage(
-	fakeProvider,
-	registrarAddress,
-	slots[0],
-	blockTag
-);
-console.log(
-	"eth_getStorageAt Match:",
-	JSON.stringify(realStorage) === JSON.stringify(fakeStorage)
-);
+for (const slot of slots) {
+	const realStorage = await ethGetStorage(
+		realProvider,
+		registrarAddress,
+		slot,
+		blockTag,
+	);
+	const fakeStorage = await ethGetStorage(
+		fakeProvider,
+		registrarAddress,
+		slot,
+		blockTag,
+	);
+	console.log(
+		`eth_getStorageAt(${toHex(slot)}) Match:`,
+		JSON.stringify(realStorage) === JSON.stringify(fakeStorage),
+	);
+}
 
 const realProof = await ethGetProof(
 	realProvider,
 	registrarAddress,
 	slots,
-	blockTag
+	blockTag,
 );
 const fakeProof = await ethGetProof(
 	fakeProvider,
 	registrarAddress,
 	slots,
-	blockTag
+	blockTag,
 );
-console.log("eth_getProof Match:", extract(realProof) === extract(fakeProof));
+console.log(
+	`eth_getProof[${slots.length}] Match:`,
+	extract(realProof) === extract(fakeProof),
+);
 
 db.close();
 process.exit(0);
@@ -221,11 +227,12 @@ async function sync() {
 	while (true) {
 		const t0 = Date.now();
 		let block1 = await p.getBlockNumber();
+		console.log(`New Blocks: (${block0}, ${block1}]`);
 		while (block0 < block1) {
 			const { logs, lastBlock, status } = await getLogs(
 				registrar,
 				block0,
-				Math.min(block1, block0 + (chainInfo.logStep ?? 10000) - 1)
+				Math.min(block1, block0 + (chainInfo.logStep ?? 10000) - 1),
 			);
 			db.transaction(() => {
 				for (const log of logs) {
@@ -270,7 +277,7 @@ async function getLogs(registrar: Contract, block0: number, block1: number) {
 			if (isError(err, "UNKNOWN_ERROR")) {
 				const match = err.message.match(
 					// this error is thrown by drpc
-					/^query exceeds max results (\d+), retry with the range (\d+)-(\d+)$/
+					/^query exceeds max results (\d+), retry with the range (\d+)-(\d+)$/,
 				);
 				if (match && parseInt(match[2]) === block0) {
 					block1 = parseInt(match[3]);
@@ -289,6 +296,6 @@ async function getLogs(registrar: Contract, block0: number, block1: number) {
 
 function printNamesCount() {
 	console.log(
-		`Names: ${db.query("SELECT count(block) FROM names").values()[0][0]}`
+		`Names: ${db.query("SELECT count(block) FROM names").values()[0][0]}`,
 	);
 }
