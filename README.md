@@ -6,6 +6,8 @@
 * Compute efficient (branch nodes hash once)
 * Multiple storage encodings (object, [bytes](./src/coder.ts), [JSON](./src/json.ts))
 
+`npm i @ensdomains/merkle-builder` [&check;](https://www.npmjs.com/package/@ensdomains/merkle-builder)
+
 #### Roadmap
 
 * Linea
