@@ -1,7 +1,7 @@
 import {
 	isBranch,
 	isExtension,
-	isLeaf,
+	newBranch,
 	newLeaf,
 	type BranchNode,
 	type MaybeNode,
@@ -14,12 +14,14 @@ import { concat } from "./utils.js";
 type Limb = [path: Uint8Array, node: Node];
 
 // node is mutated, which preserves precomputed hashes, avoid with copyNode
-// trunc is almost always node unless node exists entirely outside of the pluck envelope
 // limb paths and nodes are references
+// trunk is almost always node unless node exists entirely outside of the envelope
+// leaves reached inside of the envelope are kept in the trunk
+// extensions that span the envelope are kept in the trunk with no children
+// every limb path.length == depth
 export function pluckLimbs(
 	node: MaybeNode,
 	depth: number,
-	exact?: boolean,
 ): { trunk: MaybeNode; limbs: Limb[] } {
 	if (!node || depth <= 0) return { trunk: node, limbs: [] };
 	const queue: [parent: BranchNode, path: number[]][] = [];
@@ -47,31 +49,24 @@ export function pluckLimbs(
 	const limbs: Limb[] = [];
 	while (queue.length) {
 		const [parent, path] = queue.pop()!;
-		parent.children.forEach((child, i) => {
-			if (!child) return;
+		parent.children.forEach((x, i) => {
+			if (!x) return;
 			if (path.length + 1 === depth) {
 				parent.children[i] = undefined;
-				limbs.push([Uint8Array.of(...path, i), child]);
-			} else if (isBranch(child)) {
-				queue.push([child, [...path, i]]);
-			} else if (
-				isExtension(child) &&
-				path.length + child.path.length <= depth
-			) {
-				queue.push([child.child, [...path, i, ...child.path]]);
-			} else if (exact) {
-				// 20260125: excluding leaf/ext from trunk causes wrong negative proofs
-				parent.children[i] = undefined;
-				const full = [...path, i, ...child.path];
-				const rest = new Uint8Array(full.slice(depth));
-				limbs.push([
-					new Uint8Array(full.slice(0, depth)),
-					isLeaf(child)
-						? newLeaf(rest, child.data)
-						: rest.length
-							? { path: rest, child: child.child }
-							: child.child,
-				]);
+				limbs.push([Uint8Array.of(...path, i), x]);
+			} else if (isBranch(x)) {
+				queue.push([x, [...path, i]]);
+			} else if (isExtension(x)) {
+				const full = [...path, i, ...x.path];
+				if (full.length >= depth) {
+					const { cache, ...branch } = x.child; // remove cache from branch
+					const child = newBranch(); // preserve extension with no children
+					if (cache) child.cache = cache; // inject cache
+					parent.children[i] = { path: x.path, child }; // new extension
+					limbs.push([new Uint8Array(full.slice(0, depth)), branch]);
+				} else {
+					queue.push([x.child, full]); // extension inside depth
+				}
 			}
 		});
 	}
@@ -81,11 +76,7 @@ export function pluckLimbs(
 // trunk is mutated, which preserves precomputed hashes, avoid with copyNode
 // limb avoids copy if possible, avoid with copyNode
 // path is copied
-export function graftLimb(
-	trunk: MaybeNode,
-	path: Uint8Array,
-	limb: Node,
-): Node {
+export function graftLimb(trunk: MaybeNode, [path, limb]: Limb): Node {
 	if (!path.length) return limb; // technically invalid Limb
 	if (!trunk) {
 		if (isBranch(limb)) {
@@ -96,39 +87,35 @@ export function graftLimb(
 			return copy;
 		}
 	}
-	let start = 0;
 	let index = 0;
-	let node: MaybeNode = trunk;
+	let parent: MaybeNode = trunk;
 	while (index < path.length - 1) {
-		if (isBranch(node)) {
-			const child: MaybeNode = node.children[path[index]];
-			if (!child) {
-				start = index;
-				index = path.length - 1;
-				break; // dropped extension
-			}
-			start = ++index;
-			node = child;
-		} else if (isExtension(node)) {
-			++start;
-			index += node.path.length;
-			node = node.child;
+		if (isBranch(parent)) {
+			parent = parent.children[path[index++]];
+		} else if (isExtension(parent)) {
+			index += parent.path.length; // check path?
+			if (index >= path.length) break;
+			parent = parent.child;
 		} else {
 			break;
 		}
 	}
-	if (!isBranch(node)) throw new RangeError("invalid graft");
-	if (start === index) {
-		node.children[path[start]] = limb;
-	} else if (isBranch(limb)) {
-		node.children[path[start]] = {
-			path: path.slice(start + 1),
-			child: limb,
-		};
+	if (isExtension(parent)) {
+		if (!isBranch(limb)) throw new RangeError("expected branch");
+		parent.child.children = limb.children;
+	} else if (isBranch(parent)) {
+		if (isBranch(limb)) {
+			parent.children[path[index]] =
+				index + 1 == path.length
+					? limb
+					: { path: path.slice(index + 1), child: limb };
+		} else {
+			const copy = { ...limb };
+			copy.path = concat(path.subarray(index + 1), copy.path);
+			parent.children[path[index]] = copy;
+		}
 	} else {
-		const copy = { ...limb };
-		copy.path = concat(path.subarray(start + 1), copy.path);
-		node.children[path[start]] = copy;
+		throw new RangeError("invalid graft location");
 	}
 	return trunk;
 }

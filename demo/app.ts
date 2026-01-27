@@ -80,10 +80,7 @@ if (1) {
 	console.time("rebuildTrie");
 	for (const row of db
 		.query<
-			{
-				addr: Uint8Array;
-				name: Uint8Array;
-			},
+			{ addr: Uint8Array; name: Uint8Array },
 			number
 		>("SELECT * FROM names WHERE block < ? ORDER BY rowid")
 		.iterate(block0)) {

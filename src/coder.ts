@@ -26,6 +26,9 @@ export class Coder {
 	}
 	public pos = 0;
 	constructor(public buf: Uint8Array = new Uint8Array(1024)) {}
+	get remaining() {
+		return Math.max(0, this.buf.length - this.pos);
+	}
 	reset() {
 		this.pos = 0;
 	}
@@ -147,8 +150,8 @@ export class Coder {
 				includeCache === undefined
 					? node.cache
 					: includeCache
-					? encodeNode(node)
-					: undefined;
+						? encodeNode(node)
+						: undefined;
 			this.writeByte(cache ? TY_BRANCH_WITH_CACHE : TY_BRANCH);
 			for (const x of node.children) {
 				this.writeNode(x, includeCache);

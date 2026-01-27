@@ -95,7 +95,7 @@ console.log("Coder:", {
 });
 
 // join
-const copy = limbs.reduce((a, x) => graftLimb(a, ...x), copyNode(trunk));
+const copy = limbs.reduce(graftLimb, copyNode(trunk));
 console.log(`Reproduce StorageHash: ${deepEquals(node, copy)}`);
 
 // load sql
@@ -139,7 +139,7 @@ function lookup(address: Hex, loadTrunk: boolean) {
 	const part = path.subarray(0, depth);
 	const limb = select.get(part)?.value;
 	if (limb) {
-		temp = graftLimb(temp, part, new Coder(limb).readNode()!);
+		temp = graftLimb(temp, [part, new Coder(limb).readNode()!]);
 	}
 	console.log({
 		loadTrunk,

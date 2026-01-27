@@ -22,4 +22,13 @@ describe("coder", () => {
 			expect(coder.readSize()).toStrictEqual(i);
 		}
 	});
+
+	test("remaining", () => {
+		const coder = new Coder(new Uint8Array(2));
+		expect(coder.remaining).toStrictEqual(2);
+		coder.readByte();
+		expect(coder.remaining).toStrictEqual(1);
+		coder.pos = 10;
+		expect(coder.remaining).toStrictEqual(0);
+	});
 });
