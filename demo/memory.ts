@@ -60,7 +60,8 @@ console.log(`StorageHash: ${storageHash}`);
 console.log(`CacheByteCount: ${formatBytes(getByteCount(node) - byteCount)}`);
 
 // split
-const { trunk, limbs } = pluckLimbs(copyNode(node), depth);
+const trunk = copyNode(node);
+const limbs = pluckLimbs(trunk, depth);
 console.log(`LimbCount: ${limbs.length}`);
 console.log(`Trunk Size: ${formatBytes(Coder.getByteCount(trunk))}`);
 console.log(
