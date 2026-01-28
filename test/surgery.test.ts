@@ -4,14 +4,16 @@ import {
 	getProof,
 	getRootHash,
 	insertLeaf,
+	isBranch,
 	isExtension,
 	isLeaf,
 	newBranch,
 	newLeaf,
+	type BranchNode,
 	type MaybeNode,
 } from "../src/trie.js";
 import { graftLimb, pluckLimbs } from "../src/surgery.js";
-import { randomTrie } from "./utils.js";
+import { dump, randomTrie } from "./utils.js";
 
 describe("surgery", () => {
 	describe("pluckLimbs", () => {
@@ -159,27 +161,38 @@ describe("surgery", () => {
 	});
 
 	test("getProof", () => {
-		const path = Uint8Array.of(0, 0);
+		const path = Uint8Array.of(0, 0, 0);
 
 		let a = undefined;
 		a = insertLeaf(a, path, Uint8Array.of(1));
-		a = insertLeaf(a, Uint8Array.of(0, 1), Uint8Array.of(2));
-		a = insertLeaf(a, Uint8Array.of(1, 0), Uint8Array.of(3));
-		a = insertLeaf(a, Uint8Array.of(1, 1), Uint8Array.of(4));
+		a = insertLeaf(a, Uint8Array.of(0, 0, 1), Uint8Array.of(2));
+		a = insertLeaf(a, Uint8Array.of(1, 0, 0), Uint8Array.of(3));
+		a = insertLeaf(a, Uint8Array.of(1, 0, 1), Uint8Array.of(4));
 
 		const pa = getProof(a, path);
 
 		const rootHash = getRootHash(a);
 
+		const depth = 2;
 		const trunk = copyNode(a);
-		const limbs = pluckLimbs(trunk, 1);
-		expect(limbs, "limbs").toHaveLength(2);
-		expect(getRootHash(trunk)).toStrictEqual(rootHash);
+		const limbs = pluckLimbs(trunk, depth);
+
+		// "cache" only in trunk
+		expect(Object.keys(trunk), "keys:trunk").toStrictEqual([
+			"children",
+			"cache",
+		]);
+		expect(
+			Object.keys((trunk as any)?.children[1]?.child),
+			"keys:trunk1",
+		).toStrictEqual(["children", "cache"]);
+		expect(Object.keys(limbs[0][1]), "keys:limb1").toStrictEqual(["children"]);
+		expect(getRootHash(trunk), "hash").toStrictEqual(rootHash);
 
 		// partial proof
-		expect(limbs[0][0]).toStrictEqual(path.subarray(0, 1));
+		expect(limbs[0][0], "limb0").toStrictEqual(path.subarray(0, depth));
 		const b = graftLimb(trunk, limbs[0]);
 		const pb = getProof(b, path);
-		expect(pb).toStrictEqual(pa);
+		expect(pb, "proof").toStrictEqual(pa);
 	});
 });
