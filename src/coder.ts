@@ -99,13 +99,12 @@ export class Coder {
 		this.writeBytes(v);
 	}
 	readPath() {
-		const n = this.readByte();
+		const n = this.readSize();
 		return toNibblePath(this.readBytes((n + 1) >> 1)).subarray(0, n);
 	}
 	writePath(v: Uint8Array) {
-		const n = (v.length + 1) >> 1;
-		this.expand(1 + n);
-		this.buf[this.pos++] = v.length;
+		this.writeSize(v.length);
+		this.expand((v.length + 1) >> 1);
 		for (let i = 0; i < v.length; i += 2) {
 			this.buf[this.pos++] = (v[i] << 4) | (v[i + 1] ?? 0);
 		}
