@@ -52,6 +52,7 @@ export type ChainInfo = {
 	publicRPC?: string;
 	drpcSlug?: string;
 	alchemySlug?: string;
+	unfinalized?: boolean;
 	// registrar info
 	createdAtBlock: number;
 	ownable?: boolean;
@@ -122,6 +123,7 @@ export function determineChain(name = "op"): ChainInfo {
 				drpcSlug: "scroll",
 				alchemySlug: "scroll-mainnet",
 				createdAtBlock: 16604272,
+				unfinalized: true, // 20260219: not sure why finalized is being weird
 			};
 		default:
 			throw new Error(`unsupported chain: ${name}`);

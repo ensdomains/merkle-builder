@@ -216,13 +216,16 @@ async function sync() {
 	const registrar = new Contract(registrarAddress, REGISTRAR_ABI, p);
 	while (true) {
 		const t0 = Date.now();
-		let block1 = await p.getBlockNumber();
-		console.log(`New Blocks: (${block0}, ${block1}]`);
-		while (block0 < block1) {
+		const block = await p.getBlock(
+			chainInfo.unfinalized ? "latest" : "finalized",
+		);
+		if (!block) throw new Error(`expected block1`);
+		console.log(`New Blocks: (${block0}, ${block.number}]`);
+		while (block0 < block.number) {
 			const { logs, lastBlock, status } = await getLogs(
 				registrar,
 				block0,
-				Math.min(block1, block0 + (chainInfo.logStep ?? 10000) - 1),
+				Math.min(block.number, block0 + (chainInfo.logStep ?? 10000) - 1),
 			);
 			db.transaction(() => {
 				for (const log of logs) {

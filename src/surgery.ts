@@ -47,7 +47,7 @@ export function pluckLimbs(node: MaybeNode, depth: number): Limb[] {
 // limb is referenced, avoid with copyNode
 export function graftLimb(trunk: MaybeNode, [path, limb]: Limb): Node {
 	if (!trunk || !path.length) throw new Error("invalid graft");
-	let part: number[] = [];
+	const part: number[] = [];
 	let parent: MaybeNode = undefined;
 	let cursor: MaybeNode = trunk;
 	while (part.length < path.length) {
