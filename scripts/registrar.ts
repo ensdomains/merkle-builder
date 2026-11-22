@@ -51,6 +51,11 @@ export type ChainInfo = {
 	ownable?: boolean;
 };
 
+// sqlite database of NameForAddrChanged events (see scripts/demo.ts)
+export function getDatabasePath(info: ChainInfo) {
+	return `${import.meta.dir}/data/${info.name}.sqlite`;
+}
+
 export function determineProvider(info: ChainInfo, proto = "https") {
 	const { RPC_URL, DRPC_KEY, ALCHEMY_KEY } = process.env;
 	if (RPC_URL) {

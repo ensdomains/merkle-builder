@@ -15,6 +15,7 @@ import { toBytes, toWord } from "../src/utils.js";
 import {
 	determineChain,
 	determineProvider,
+	getDatabasePath,
 	getPrimarySlot,
 	getRegistrarAddress,
 	KNOWN_ADDRS,
@@ -26,7 +27,6 @@ const args = parseArgs({
 	options: {
 		chain: { type: "string", short: "c" },
 		noSync: { type: "boolean" },
-		readme: { type: "boolean" }, // update the README demo line for this chain
 	},
 	strict: true,
 });
@@ -41,7 +41,7 @@ console.log(`Contract: ${chainInfo.explorer}/address/${registrarAddress}`);
 console.log(`Public RPC: ${chainInfo.publicRPC}`);
 console.log(`Prover RPC: ${realRPC}`);
 
-const db = new Database(`${import.meta.dir}/${chainInfo.name}.sqlite`);
+const db = new Database(getDatabasePath(chainInfo));
 db.run(`CREATE TABLE IF NOT EXISTS state (
 	key STRING PRIMARY KEY, 
 	value STRING
@@ -148,7 +148,6 @@ const fakeClient = createPublicClient({
 });
 
 const slots = KNOWN_ADDRS.map(getPrimarySlot);
-let matched = true;
 
 for (const slot of slots) {
 	const [realStorage, fakeStorage] = await Promise.all(
@@ -160,7 +159,6 @@ for (const slot of slots) {
 		`eth_getStorageAt(${toHex(slot)}) Match:`,
 		realStorage === fakeStorage,
 	);
-	matched &&= realStorage === fakeStorage;
 }
 
 const [realProof, fakeProof] = await Promise.all(
@@ -172,39 +170,13 @@ const [realProof, fakeProof] = await Promise.all(
 		}),
 	),
 );
-const proofMatch = extract(realProof) === extract(fakeProof);
-console.log(`eth_getProof[${slots.length}] Match:`, proofMatch);
-matched &&= proofMatch;
-
-if (args.values.readme) {
-	await updateReadme();
-}
+console.log(
+	`eth_getProof[${slots.length}] Match:`,
+	extract(realProof) === extract(fakeProof),
+);
 
 db.close();
 process.exit(0);
-
-// rewrite this chain's README line: "* ✅️ [`op`](...) &rarr; `125` names as of `2026-05-31`"
-async function updateReadme() {
-	const { timestamp } = await realClient.getBlock({ blockNumber });
-	const date = new Date(Number(timestamp) * 1000).toISOString().slice(0, 10);
-	const count = db
-		.query<{ n: number }, [number]>("SELECT count(*) AS n FROM names WHERE block < ?")
-		.get(block0)!.n;
-	const file = Bun.file(`${import.meta.dir}/../README.md`);
-	const readme = await file.text();
-	// note: the README uses non-breaking spaces around &rarr;
-	const re = new RegExp(
-		`^(\\s*\\* )\\S+ (\\[\`${chainInfo.key}\`\\]\\([^)]*\\))(\\s)&rarr;(\\s)\`[\\d,]+\` names as of \`[\\d-]+\``,
-		"m",
-	);
-	if (!re.test(readme)) {
-		console.log(`README: no line for \`${chainInfo.key}\``);
-		return;
-	}
-	const line = `$1${matched ? "✅️" : "❌️"} $2$3&rarr;$4\`${count.toLocaleString("en-US")}\` names as of \`${date}\``;
-	await Bun.write(file, readme.replace(re, line));
-	console.log(`README: ${chainInfo.key} = ${count} names as of ${date} (${matched ? "match" : "MISMATCH"})`);
-}
 
 function extract({ storageHash, storageProof }: GetProofReturnType) {
 	return JSON.stringify({ storageHash, storageProof }, (_, x) =>
@@ -251,6 +223,11 @@ async function sync() {
 		}
 		if (Date.now() - t0 < 1000) break;
 	}
+	// remember when the last synced block was produced (used by scripts/readme.ts)
+	const last = BigInt(block0 - 1);
+	const { timestamp } = await client.getBlock({ blockNumber: last });
+	updateState.run("timestampBlock", String(last));
+	updateState.run("timestamp", String(timestamp));
 	console.log(`Calls: ${calls}`);
 	console.timeEnd("sync");
 	printNamesCount();

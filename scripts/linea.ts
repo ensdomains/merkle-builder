@@ -7,6 +7,7 @@ import { toBytes } from "../src/utils.js";
 import {
 	determineChain,
 	determineProvider,
+	getDatabasePath,
 	getPrimarySlot,
 	getRegistrarAddress,
 	KNOWN_ADDRS,
@@ -15,7 +16,7 @@ import {
 const chainInfo = determineChain("linea");
 const registrarAddress = getRegistrarAddress(chainInfo.testnet);
 
-const db = new Database(`${import.meta.dir}/${chainInfo.name}.sqlite`, {
+const db = new Database(getDatabasePath(chainInfo), {
 	readonly: true,
 });
 const block0 = Number(
