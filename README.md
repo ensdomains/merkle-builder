@@ -1,5 +1,8 @@
 # merkle-builder
 
+[![CI](https://github.com/ensdomains/merkle-builder/actions/workflows/main.yml/badge.svg)](https://github.com/ensdomains/merkle-builder/actions/workflows/main.yml)
+[![npm](https://img.shields.io/npm/v/@ensdomains/merkle-builder)](https://www.npmjs.com/package/@ensdomains/merkle-builder)
+
 * Rebuild a contract's storage trie from events and serve storage proofs without an archive node
 * [`EthStorage`](./src/eth.ts) &mdash; Ethereum Merkle-Patricia trie (keccak), matches `eth_getProof`
 	* Memory efficient (copy-on-write, shared subexpressions)
@@ -7,8 +10,6 @@
 	* Multiple storage encodings (object, [bytes](./src/coder.ts), [JSON](./src/json.ts)) and [surgery](./src/surgery.ts) (trunk + limbs)
 * [`LineaStorage`](./src/linea.ts) &mdash; Linea sparse Merkle trie ([Poseidon2](./src/poseidon2.ts) over KoalaBear), matches `linea_getProof`
 * Both extend [`SlotStorage`](./src/storage.ts) (`getStorage` / `setStorage`), which provides the Solidity layout (`setBytes` / `getBytes`)
-
-`npm i @ensdomains/merkle-builder` [&check;](https://www.npmjs.com/package/@ensdomains/merkle-builder)
 
 ```ts
 import { EthStorage, LineaStorage, followSlot } from "@ensdomains/merkle-builder";
@@ -51,23 +52,26 @@ linea.getProof(slot); // linea_getProof().storageProofs[i]
 
 * `bun test`
 * `bun run check` &mdash; type check (`tsc`)
-* `bun run lint` &mdash; [Biome](https://biomejs.dev) lint + import order (`bun run lint:fix` to apply fixes)
+* `bun run lint` &mdash; [Biome](https://biomejs.dev) lint + import order
+* `bun run lint:fix` &mdash; apply Biome fixes
 * `bun run fuzz` &mdash; run [`storage.test.ts`](./test/storage.test.ts) until it fails
 
 ### Build
 
-* `bun run build` &mdash; emits ESM + declarations to `dist/` with `tsc`
+* `bun run build`
 
 ### Demo
 
 * Replicate `eth_getProof` for [`L2ReverseRegistrar`](https://github.com/ensdomains/ens-contracts/blob/staging/contracts/reverseRegistrar/L2ReverseRegistrar.sol) (requires [`.env`](./.env.sample) for provider, or `RPC_URL=<rpc with eth_getProof>`)
-    * `bun demo/app.ts -c <chain>`
-        * ✅️ [`op`](https://optimistic.etherscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `125` names as of `2025-05-31`
+    * `bun run demo -c <chain>`
+        * ✅️ [`op`](https://optimistic.etherscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `125` names as of `2026-05-31`
         * ✅️ [`base`](https://basescan.org/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `1,846,927` names as of `2026-05-31`
         * ✅️ [`arb`](https://arbiscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `190` names as of `2026-05-31`
         * ✅️ [`linea`](https://lineascan.build/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `95` names as of `2026-05-31`
         * ✅️ [`scroll`](https://scrollscan.com/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `57` names as of `2026-05-31`
-* Replay the same events into `LineaStorage` and match `linea_getProof` (run `bun demo/app.ts -c linea` first to sync)
-    * `bun demo/linea.ts`
+* Update the name counts and dates above from `scripts/data/*.sqlite`
+    * `bun run readme`
+* Replay the same events into `LineaStorage` and match `linea_getProof` (run `bun run demo -c linea` first to sync)
+    * `bun run demo:linea`
 * Deserialize from *trunk* and *limb* with precomputed hashes, perform surgery, and produce correct `eth_getProof`
-    * `bun demo/memory.ts -c <chain> -d <depth>`
+    * `bun run demo:memory -c <chain> -d <depth>`

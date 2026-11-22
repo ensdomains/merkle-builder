@@ -7,4 +7,4 @@ cache/
 dist/
 
 # too large for github with standard flow
-demo/base.sqlite
+scripts/data/base.sqlite

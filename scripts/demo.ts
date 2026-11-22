@@ -1,5 +1,5 @@
 import { Database } from "bun:sqlite";
-import { parseArgs } from "node:util";
+import { parseArgs, styleText } from "node:util";
 import {
 	BaseError,
 	createPublicClient,
@@ -15,12 +15,13 @@ import { toBytes, toWord } from "../src/utils.js";
 import {
 	determineChain,
 	determineProvider,
+	getDatabasePath,
 	getPrimarySlot,
 	getRegistrarAddress,
 	KNOWN_ADDRS,
 	REGISTRAR_ABI,
 	setOwner,
-} from "./registrar.js";
+} from "./ens-registrar.js";
 
 const args = parseArgs({
 	options: {
@@ -30,19 +31,64 @@ const args = parseArgs({
 	strict: true,
 });
 
+// colors are disabled when piped or with NO_COLOR
+const dim = (s: string) => styleText("dim", s);
+const bold = (s: string) => styleText("bold", s);
+const cyan = (s: string) => styleText("cyan", s);
+const green = (s: string) => styleText("green", s);
+const yellow = (s: string) => styleText("yellow", s);
+const red = (s: string) => styleText("red", s);
+const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
+const SEP = dim(" · ");
+
+// on a terminal the sync progress line is redrawn in place
+const TTY = !!process.stdout.isTTY;
+let progressShown = false;
+function log(line: string) {
+	if (progressShown) {
+		process.stdout.write("\r\x1b[2K");
+		progressShown = false;
+	}
+	console.log(line);
+}
+function progress(line: string) {
+	if (TTY) {
+		process.stdout.write(`\r\x1b[2K${line}`);
+		progressShown = true;
+	} else {
+		console.log(line);
+	}
+}
+
+function info(label: string, value: string) {
+	console.log(`${dim(`${label}:`)} ${value}`);
+}
+
+function matched(label: string, ok: boolean) {
+	console.log(`${ok ? green("✓ match") : red("✗ MISMATCH")} ${label}`);
+}
+
+function fmtDuration(seconds: number) {
+	if (!Number.isFinite(seconds)) return "?";
+	const s = Math.round(seconds);
+	if (s < 60) return `${s}s`;
+	if (s < 3600) return `${Math.floor(s / 60)}m${String(s % 60).padStart(2, "0")}s`;
+	return `${Math.floor(s / 3600)}h${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}m`;
+}
+
 const chainInfo = determineChain(args.values.chain);
 const registrarAddress = getRegistrarAddress(chainInfo.testnet);
 const NAME_CHANGED = getAbiItem({ abi: REGISTRAR_ABI, name: "NameForAddrChanged" });
 const realRPC = determineProvider(chainInfo);
 
-console.log(`Chain: ${chainInfo.name.toUpperCase()} (${chainInfo.id})`);
-console.log(`Contract: ${chainInfo.explorer}/address/${registrarAddress}`);
-console.log(`Public RPC: ${chainInfo.publicRPC}`);
-console.log(`Prover RPC: ${realRPC}`);
+info("Chain", bold(`${chainInfo.name.toUpperCase()} (${chainInfo.id})`));
+info("Contract", cyan(`${chainInfo.explorer}/address/${registrarAddress}`));
+info("Public RPC", chainInfo.publicRPC ?? dim("(none)"));
+info("Prover RPC", realRPC);
 
-const db = new Database(`${import.meta.dir}/${chainInfo.name}.sqlite`);
+const db = new Database(getDatabasePath(chainInfo));
 db.run(`CREATE TABLE IF NOT EXISTS state (
-	key STRING PRIMARY KEY, 
+	key STRING PRIMARY KEY,
 	value STRING
 )`);
 db.run(`CREATE TABLE IF NOT EXISTS names (
@@ -72,9 +118,9 @@ let block0 = chainInfo.createdAtBlock;
 	if (state.block0) {
 		block0 = Math.max(block0, parseInt(state.block0, 10));
 	}
-	console.log(`Blocks: [${chainInfo.createdAtBlock}, ${block0})`);
-	printNamesCount();
-	console.time("rebuildTrie");
+	info("Blocks", `[${fmt(chainInfo.createdAtBlock)}, ${fmt(block0)})`);
+	info("Names", fmt(namesCount()));
+	const t = performance.now();
 	for (const row of db
 		.query<
 			{ addr: Uint8Array; name: Uint8Array },
@@ -83,16 +129,17 @@ let block0 = chainInfo.createdAtBlock;
 		.iterate(block0)) {
 		storage.setBytes(getPrimarySlot(toHex(row.addr)), row.name);
 	}
-	console.timeEnd("rebuildTrie");
+	info("Rebuild", dim(`${fmt(performance.now() - t)}ms`));
 }
 
 process.once("SIGINT", () => {
-	console.log("\nStopping...");
+	log(yellow("\nStopping..."));
 	db.close();
 	process.exit();
 });
 
 if (!args.values.noSync) {
+	console.log();
 	await sync();
 }
 
@@ -107,36 +154,31 @@ if (chainInfo.ownable) {
 		functionName: "owner",
 		blockNumber,
 	});
-	console.log(`Owner: ${owner}`);
+	info("Owner", owner);
 	setOwner(storage, owner);
 }
 
-console.time("getRootHash");
-const { storageHash } = storage;
-console.timeEnd("getRootHash");
-console.log(`StorageHash: ${storageHash}`);
+{
+	const t = performance.now();
+	const { storageHash } = storage;
+	info("StorageHash", `${bold(storageHash)} ${dim(`(${fmt(performance.now() - t)}ms)`)}`);
+}
 
 const fakeClient = createPublicClient({
 	transport: custom({
 		async request({ method, params }) {
 			switch (method) {
 				case "eth_getProof": {
-					console.time("getProof");
-					const storageProof = params[1].map((hex: string) =>
-						storage.getProof(toBytes(hex, 32)),
-					);
-					console.timeEnd("getProof");
 					return {
 						address: registrarAddress.toLowerCase(),
-						storageHash,
-						storageProof,
+						storageHash: storage.storageHash,
+						storageProof: params[1].map((hex: string) =>
+							storage.getProof(toBytes(hex, 32)),
+						),
 					};
 				}
 				case "eth_getStorageAt": {
-					console.time("getStorage");
-					const word = toWord(storage.getStorage(toBytes(params[1], 32)));
-					console.timeEnd("getStorage");
-					return toHex(word);
+					return toHex(toWord(storage.getStorage(toBytes(params[1], 32))));
 				}
 				default: {
 					throw new Error(`unsupported method: ${method}`);
@@ -146,6 +188,8 @@ const fakeClient = createPublicClient({
 	}),
 });
 
+console.log(dim(`\nComparing with ${realRPC} at block ${fmt(Number(blockNumber))}`));
+
 const slots = KNOWN_ADDRS.map(getPrimarySlot);
 
 for (const slot of slots) {
@@ -154,10 +198,7 @@ for (const slot of slots) {
 			c.getStorageAt({ address: registrarAddress, slot: toHex(slot), blockNumber }),
 		),
 	);
-	console.log(
-		`eth_getStorageAt(${toHex(slot)}) Match:`,
-		realStorage === fakeStorage,
-	);
+	matched(`eth_getStorageAt(${dim(toHex(slot))})`, realStorage === fakeStorage);
 }
 
 const [realProof, fakeProof] = await Promise.all(
@@ -169,10 +210,7 @@ const [realProof, fakeProof] = await Promise.all(
 		}),
 	),
 );
-console.log(
-	`eth_getProof[${slots.length}] Match:`,
-	extract(realProof) === extract(fakeProof),
-);
+matched(`eth_getProof(${slots.length} slots)`, extract(realProof) === extract(fakeProof));
 
 db.close();
 process.exit(0);
@@ -184,47 +222,79 @@ function extract({ storageHash, storageProof }: GetProofReturnType) {
 }
 
 async function sync() {
-	console.time("sync");
+	const t0 = performance.now();
 	let calls = 0;
 	const client = createPublicClient({
 		transport: http(chainInfo.publicRPC ?? realRPC, {
 			onFetchRequest: () => void calls++,
 		}),
 	});
+	const start = block0;
+	let added = 0;
+	let total = namesCount();
 	while (true) {
-		const t0 = Date.now();
+		const loop0 = Date.now();
 		const block = await client.getBlock({
 			blockTag: chainInfo.unfinalized ? "latest" : "finalized",
 		});
-		const block1 = Number(block.number);
-		console.log(`New Blocks: (${block0}, ${block1}]`);
-		while (block0 < block1) {
-			const { logs, lastBlock, status } = await getLogs(
+		const head = Number(block.number);
+		if (block0 >= head) {
+			log(dim(`Up to date at block ${fmt(head)}`));
+		} else {
+			log(
+				`${bold("Syncing")} ${fmt(block0)} → ${fmt(head)} ${dim(`(${fmt(head - block0 + 1)} blocks)`)}`,
+			);
+		}
+		while (block0 < head) {
+			const { logs, lastBlock } = await getLogs(
 				client,
 				block0,
-				Math.min(block1, block0 + (chainInfo.logStep ?? 10000) - 1),
+				Math.min(head, block0 + (chainInfo.logStep ?? 10000) - 1),
 			);
 			db.transaction(() => {
-				for (const log of logs) {
-					const { addr, name } = log.args;
+				logs.forEach((entry, i) => {
+					const { addr, name } = entry.args;
 					const nameBuf = Buffer.from(name);
-					const blockNumber = Number(log.blockNumber);
+					const blockNumber = Number(entry.blockNumber);
 					storage.setBytes(getPrimarySlot(addr), nameBuf);
-					console.log(`[${blockNumber}] ${addr} = ${name}`);
 					insertName.run(blockNumber, toBytes(addr, 20), nameBuf);
-				}
-				if (logs.length > 20) {
-					console.log(status); // repeat message
-				}
+					if (i < 5) {
+						log(`  ${dim(`[${blockNumber}]`)} ${cyan(addr)} ${dim("=")} ${green(name)}`);
+					} else if (i === 5) {
+						log(dim(`  … and ${fmt(logs.length - 5)} more`));
+					}
+				});
 				block0 = lastBlock + 1;
 				updateState.run("block0", String(block0));
 			})();
+			added += logs.length;
+			total += logs.length;
+			// progress over this sync session
+			const done = block0 - start;
+			const todo = head + 1 - start;
+			const rate = done / ((performance.now() - t0) / 1000);
+			progress(
+				[
+					cyan(`[${((100 * Math.min(done, todo)) / todo).toFixed(1).padStart(5)}%]`) +
+						` ${fmt(lastBlock)} / ${fmt(head)}`,
+					`${fmt(rate)} blk/s`,
+					`ETA ${fmtDuration(Math.max(0, head + 1 - block0) / rate)}`,
+					`${logs.length ? green(`+${fmt(logs.length)}`) : dim("+0")} names ${dim(`(${fmt(total)})`)}`,
+				].join(SEP),
+			);
 		}
-		if (Date.now() - t0 < 1000) break;
+		if (Date.now() - loop0 < 1000) break;
 	}
-	console.log(`Calls: ${calls}`);
-	console.timeEnd("sync");
-	printNamesCount();
+	// remember when the last synced block was produced (used by scripts/readme.ts)
+	const last = BigInt(block0 - 1);
+	const { timestamp } = await client.getBlock({ blockNumber: last });
+	updateState.run("timestampBlock", String(last));
+	updateState.run("timestamp", String(timestamp));
+	log(
+		`${green("Synced")} ${fmt(added)} new names` +
+			dim(` in ${fmtDuration((performance.now() - t0) / 1000)} (${fmt(calls)} rpc calls)`),
+	);
+	info("Names", fmt(total));
 }
 
 async function getLogs(client: PublicClient, block0: number, block1: number) {
@@ -238,8 +308,6 @@ async function getLogs(client: PublicClient, block0: number, block1: number) {
 				toBlock: BigInt(block1),
 				strict: true,
 			});
-			const status = `getLogs: [${block0}, ${block1}] (${count}) = ${logs.length}`;
-			console.log(status);
 			if (logs.length > 100) {
 				const lastBlock = Number(logs[logs.length - 1].blockNumber);
 				if (Number(logs[0].blockNumber) !== lastBlock) {
@@ -248,7 +316,7 @@ async function getLogs(client: PublicClient, block0: number, block1: number) {
 					logs.splice(i + 1, logs.length - i);
 				}
 			}
-			return { logs, lastBlock: block1, status };
+			return { logs, lastBlock: block1 };
 		} catch (err: unknown) {
 			// this error is thrown by drpc
 			const match =
@@ -258,10 +326,11 @@ async function getLogs(client: PublicClient, block0: number, block1: number) {
 				);
 			if (match && parseInt(match[2], 10) === block0) {
 				block1 = parseInt(match[3], 10);
+				log(yellow(`  getLogs: too many results, retry ${fmt(block0)}-${fmt(block1)}`));
 				continue;
 			} else if (count > 1) {
 				const less = Math.ceil(count / 5);
-				console.log(`getLogs: ${count} => ${less} (retry)`);
+				log(yellow(`  getLogs: ${fmt(count)} → ${fmt(less)} blocks (retry)`));
 				block1 = block0 + less - 1;
 				continue;
 			}
@@ -270,8 +339,6 @@ async function getLogs(client: PublicClient, block0: number, block1: number) {
 	}
 }
 
-function printNamesCount() {
-	console.log(
-		`Names: ${db.query("SELECT count(block) FROM names").values()[0][0]}`,
-	);
+function namesCount(): number {
+	return db.query<{ n: number }, []>("SELECT count(*) AS n FROM names").get()?.n ?? 0;
 }

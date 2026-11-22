@@ -14,7 +14,12 @@ import {
 	type MaybeNode,
 	toNibblePath,
 } from "../src/trie.js";
-import { determineChain, getPrimarySlot, KNOWN_ADDRS } from "./registrar.js";
+import {
+	determineChain,
+	getDatabasePath,
+	getPrimarySlot,
+	KNOWN_ADDRS,
+} from "./ens-registrar.js";
 
 const args = parseArgs({
 	options: {
@@ -30,7 +35,7 @@ console.log(`Chain: ${chainInfo.name}`);
 const depth = parseInt(args.values.depth, 10);
 console.log(`Depth: ${depth}`);
 
-const db = new Database(`${import.meta.dir}/${chainInfo.name}.sqlite`);
+const db = new Database(getDatabasePath(chainInfo));
 
 console.log(
 	`Names: ${db.query("SELECT count(block) FROM names").values()[0][0]}`,

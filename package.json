@@ -24,6 +24,10 @@
 		"lint:fix": "biome check --write",
 		"test": "bun test",
 		"fuzz": "while bun test test/storage.test.ts; do :; done",
+		"demo": "bun scripts/demo.ts",
+		"demo:linea": "bun scripts/linea.ts",
+		"demo:memory": "bun scripts/memory.ts",
+		"readme": "bun scripts/readme.ts",
 		"prepublishOnly": "bun run check && bun test && bun run build"
 	},
 	"peerDependencies": {

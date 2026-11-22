@@ -6,7 +6,7 @@
 		"useIgnoreFile": true
 	},
 	"files": {
-		"includes": ["src/**", "test/**", "demo/**", "!test/fixtures"]
+		"includes": ["src/**", "test/**", "scripts/**", "!test/fixtures"]
 	},
 	"formatter": {
 		"enabled": false
@@ -29,7 +29,7 @@
 	},
 	"overrides": [
 		{
-			"includes": ["test/**", "demo/**"],
+			"includes": ["test/**", "scripts/**"],
 			"linter": {
 				"rules": {
 					"suspicious": {

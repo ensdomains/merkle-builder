@@ -35,6 +35,7 @@ export const KNOWN_ADDRS = [
 ] as const;
 
 export type ChainInfo = {
+	key: string; // -c argument (matches the README demo list)
 	id: number;
 	name: string;
 	testnet?: boolean;
@@ -50,6 +51,11 @@ export type ChainInfo = {
 	ownable?: boolean;
 };
 
+// sqlite database of NameForAddrChanged events (see scripts/demo.ts)
+export function getDatabasePath(info: ChainInfo) {
+	return `${import.meta.dir}/data/${info.name}.sqlite`;
+}
+
 export function determineProvider(info: ChainInfo, proto = "https") {
 	const { RPC_URL, DRPC_KEY, ALCHEMY_KEY } = process.env;
 	if (RPC_URL) {
@@ -64,7 +70,12 @@ export function determineProvider(info: ChainInfo, proto = "https") {
 }
 
 export function determineChain(name = "op"): ChainInfo {
-	switch (name.toLowerCase()) {
+	const key = name.toLowerCase();
+	return { key, ...chainInfoFor(key) };
+}
+
+function chainInfoFor(key: string): Omit<ChainInfo, "key"> {
+	switch (key) {
 		case "arb": {
 			return {
 				name: "arbitrum",
@@ -120,6 +131,6 @@ export function determineChain(name = "op"): ChainInfo {
 				unfinalized: true, // 20260219: not sure why finalized is being weird
 			};
 		default:
-			throw new Error(`unsupported chain: ${name}`);
+			throw new Error(`unsupported chain: ${key}`);
 	}
 }
