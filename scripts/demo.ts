@@ -12,12 +12,11 @@ import {
 } from "viem";
 import { EthStorage } from "../src/eth.js";
 import { toBytes, toWord } from "../src/utils.js";
+import { determineChain, determineRPC } from "./chains.js";
 import {
-	determineChain,
-	determineProvider,
 	getDatabasePath,
 	getPrimarySlot,
-	getRegistrarAddress,
+	getRegistrar,
 	KNOWN_ADDRS,
 	REGISTRAR_ABI,
 	setOwner,
@@ -31,7 +30,6 @@ const args = parseArgs({
 	strict: true,
 });
 
-// colors are disabled when piped or with NO_COLOR
 const dim = (s: string) => styleText("dim", s);
 const bold = (s: string) => styleText("bold", s);
 const cyan = (s: string) => styleText("cyan", s);
@@ -41,8 +39,7 @@ const red = (s: string) => styleText("red", s);
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 const SEP = dim(" · ");
 
-// on a terminal the sync progress line is redrawn in place
-const TTY = !!process.stdout.isTTY;
+// the sync progress line is redrawn in place (the demo is run from a terminal)
 let progressShown = false;
 function log(line: string) {
 	if (progressShown) {
@@ -52,12 +49,8 @@ function log(line: string) {
 	console.log(line);
 }
 function progress(line: string) {
-	if (TTY) {
-		process.stdout.write(`\r\x1b[2K${line}`);
-		progressShown = true;
-	} else {
-		console.log(line);
-	}
+	process.stdout.write(`\r\x1b[2K${line}`);
+	progressShown = true;
 }
 
 function info(label: string, value: string) {
@@ -66,6 +59,13 @@ function info(label: string, value: string) {
 
 function matched(label: string, ok: boolean) {
 	console.log(`${ok ? green("✓ match") : red("✗ MISMATCH")} ${label}`);
+}
+
+// wait time for a rate limited response (retry-after / x-ratelimit-reset)
+function rateLimitDelay(headers: Headers | undefined): number {
+	const seconds =
+		Number(headers?.get("retry-after")) || Number(headers?.get("x-ratelimit-reset"));
+	return (seconds || 1) * 1000;
 }
 
 function fmtDuration(seconds: number) {
@@ -77,9 +77,10 @@ function fmtDuration(seconds: number) {
 }
 
 const chainInfo = determineChain(args.values.chain);
-const registrarAddress = getRegistrarAddress(chainInfo.testnet);
+const registrar = getRegistrar(chainInfo);
+const registrarAddress = registrar.address;
 const NAME_CHANGED = getAbiItem({ abi: REGISTRAR_ABI, name: "NameForAddrChanged" });
-const realRPC = determineProvider(chainInfo);
+const realRPC = determineRPC(chainInfo);
 
 info("Chain", bold(`${chainInfo.name.toUpperCase()} (${chainInfo.id})`));
 info("Contract", cyan(`${chainInfo.explorer}/address/${registrarAddress}`));
@@ -105,7 +106,7 @@ const updateState = db.prepare<unknown, [string, string]>(
 );
 
 const storage = new EthStorage();
-let block0 = chainInfo.createdAtBlock;
+let block0 = registrar.createdAtBlock;
 
 // restore
 {
@@ -118,7 +119,7 @@ let block0 = chainInfo.createdAtBlock;
 	if (state.block0) {
 		block0 = Math.max(block0, parseInt(state.block0, 10));
 	}
-	info("Blocks", `[${fmt(chainInfo.createdAtBlock)}, ${fmt(block0)})`);
+	info("Blocks", `[${fmt(registrar.createdAtBlock)}, ${fmt(block0)})`);
 	info("Names", fmt(namesCount()));
 	const t = performance.now();
 	for (const row of db
@@ -147,7 +148,7 @@ const realClient = createPublicClient({ transport: http(realRPC) });
 
 const blockNumber = BigInt(block0 - 1);
 
-if (chainInfo.ownable) {
+if (registrar.ownable) {
 	const owner = await realClient.readContract({
 		address: registrarAddress,
 		abi: REGISTRAR_ABI,
@@ -298,6 +299,7 @@ async function sync() {
 }
 
 async function getLogs(client: PublicClient, block0: number, block1: number) {
+	let rateLimited = 0;
 	while (true) {
 		const count = 1 + block1 - block0;
 		try {
@@ -318,6 +320,23 @@ async function getLogs(client: PublicClient, block0: number, block1: number) {
 			}
 			return { logs, lastBlock: block1 };
 		} catch (err: unknown) {
+			// rate limited: wait and retry the same range (not a range problem)
+			const limited =
+				err instanceof BaseError &&
+				(err.walk((e) => (e as { status?: number }).status === 429) as
+					| { headers?: Headers }
+					| null);
+			if (limited) {
+				if (++rateLimited > 10) {
+					throw new Error(`rpc keeps rate limiting eth_getLogs: use a keyed provider`, {
+						cause: err,
+					});
+				}
+				const delay = rateLimitDelay(limited.headers);
+				log(yellow(`  getLogs: rate limited, waiting ${fmtDuration(delay / 1000)}`));
+				await Bun.sleep(delay);
+				continue;
+			}
 			// this error is thrown by drpc
 			const match =
 				err instanceof BaseError &&

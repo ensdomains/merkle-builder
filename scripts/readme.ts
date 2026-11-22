@@ -5,7 +5,8 @@ import { Database } from "bun:sqlite";
 import { existsSync } from "node:fs";
 import { createPublicClient, http } from "viem";
 import * as chains from "viem/chains";
-import { type ChainInfo, determineChain, getDatabasePath } from "./ens-registrar.js";
+import { type ChainInfo, determineChain } from "./chains.js";
+import { getDatabasePath, getRegistrar } from "./ens-registrar.js";
 
 // "* ✅️ [`op`](...) &rarr; `125` names as of `2026-05-31`"
 // note: the README uses non-breaking spaces around &rarr;
@@ -29,7 +30,7 @@ for (const [, , key] of readme.matchAll(LINE)) {
 			.all()
 			.map((x) => [x.key, x.value]),
 	);
-	const block0 = Number(state.block0 ?? info.createdAtBlock);
+	const block0 = Number(state.block0 ?? getRegistrar(info).createdAtBlock);
 	const count =
 		db
 			.query<{ n: number }, [number]>("SELECT count(*) AS n FROM names WHERE block < ?")
