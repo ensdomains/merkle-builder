@@ -1,7 +1,7 @@
 {
 	"name": "@ensdomains/merkle-builder",
-	"version": "0.1.0",
-	"description": "Low-level Merkle-Patricia storage trie implementation",
+	"version": "0.2.0",
+	"description": "Rebuild contract storage tries (Ethereum Merkle-Patricia, Linea sparse Merkle) and generate eth_getProof / linea_getProof",
 	"type": "module",
 	"exports": {
 		".": {
@@ -50,8 +50,11 @@
 		"Solidity",
 		"Merkle",
 		"Trie",
+		"Linea",
+		"Poseidon2",
 		"eth_getProof",
-		"eth_getStorageAt"
+		"eth_getStorageAt",
+		"linea_getProof"
 	],
 	"dependencies": {
 		"@adraffy/keccak": "^1.3.4"
