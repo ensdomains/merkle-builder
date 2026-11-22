@@ -1,10 +1,11 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
-import { getRootHash, type MaybeNode } from "../src/trie.js";
+import { toHex } from "viem";
 import { insertBytes } from "../src/kv.js";
-import { toBytes, followSlot, toHex } from "../src/utils.js";
-import { randomBytes, randomInt } from "./utils.js";
+import { getRootHash, type MaybeNode } from "../src/trie.js";
+import { followSlot, toBytes } from "../src/utils.js";
 import { ethGetProof } from "./rpc.js";
+import { randomBytes, randomInt } from "./utils.js";
 
 describe("registrar", async () => {
 	const F = await Foundry.launch({ infoLog: false }); // enable to show events
@@ -16,7 +17,7 @@ describe("registrar", async () => {
 			args: [1n],
 		});
 
-		let node: MaybeNode = undefined;
+		let node: MaybeNode ;
 
 		C.on("NameForAddrChanged", (addr: string, name: string) => {
 			node = insertBytes(

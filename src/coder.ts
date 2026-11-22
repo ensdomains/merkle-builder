@@ -1,22 +1,20 @@
 import {
 	EMPTY_BYTES,
-	EMPTY_LEAF,
 	encodeNode,
 	isBranch,
-	isEmptyLeaf,
 	isExtension,
-	toNibblePath,
 	type MaybeNode,
+	toNibblePath,
 } from "./trie.js";
 
 const TY_NULL = 0;
 const TY_BRANCH = 1;
 const TY_EXTENSION = 2;
-const TY_EMPTY_LEAF = 3;
+const TY_EMPTY_LEAF = 3; // removed (reserved)
 const TY_LEAF = 4;
 const TY_BRANCH_WITH_CACHE = 5;
 
-export const MAX_SIZE = (1 << 22) - 1; // 4194304
+export const MAX_SIZE = (1 << 22) - 1; // 4194303
 
 export class Coder {
 	static getByteCount(node: MaybeNode) {
@@ -84,7 +82,9 @@ export class Coder {
 	readBytes(n: number) {
 		if (!n) return EMPTY_BYTES;
 		this.require(n);
-		return this.buf.slice(this.pos, (this.pos += n));
+		const v = this.buf.slice(this.pos, this.pos + n);
+		this.pos += n;
+		return v;
 	}
 	writeBytes(v: Uint8Array) {
 		this.expand(v.length);
@@ -131,7 +131,7 @@ export class Coder {
 				return { path, child };
 			}
 			case TY_EMPTY_LEAF:
-				return EMPTY_LEAF;
+				throw new Error("empty leaves are no longer supported");
 			case TY_LEAF:
 				return {
 					path: this.readPath(),
@@ -160,8 +160,6 @@ export class Coder {
 			this.writeByte(TY_EXTENSION);
 			this.writePath(node.path);
 			this.writeNode(node.child, includeCache);
-		} else if (isEmptyLeaf(node)) {
-			this.writeByte(TY_EMPTY_LEAF);
 		} else {
 			this.writeByte(TY_LEAF);
 			this.writePath(node.path);

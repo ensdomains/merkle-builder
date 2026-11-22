@@ -1,19 +1,17 @@
 import { describe, expect, test } from "bun:test";
+import { graftLimb, pluckLimbs } from "../src/surgery.js";
 import {
 	copyNode,
 	getProof,
 	getRootHash,
 	insertLeaf,
-	isBranch,
 	isExtension,
 	isLeaf,
+	type MaybeNode,
 	newBranch,
 	newLeaf,
-	type BranchNode,
-	type MaybeNode,
 } from "../src/trie.js";
-import { graftLimb, pluckLimbs } from "../src/surgery.js";
-import { dump, randomTrie } from "./utils.js";
+import { randomTrie } from "./utils.js";
 
 describe("surgery", () => {
 	describe("pluckLimbs", () => {
@@ -69,7 +67,7 @@ describe("surgery", () => {
 		});
 
 		test("extension (depth > length)", () => {
-			let node = undefined;
+			let node: MaybeNode;
 			node = insertLeaf(node, Uint8Array.of(0, 0), Uint8Array.of(1));
 			node = insertLeaf(node, Uint8Array.of(0, 1), Uint8Array.of(2));
 			expect(isExtension(node), "type").toBeTrue();
@@ -78,11 +76,11 @@ describe("surgery", () => {
 		});
 
 		test("extension (depth < length)", () => {
-			let node = undefined;
+			let node: MaybeNode;
 			node = insertLeaf(node, Uint8Array.of(0, 0, 0), Uint8Array.of(1));
 			node = insertLeaf(node, Uint8Array.of(0, 0, 1), Uint8Array.of(2));
 			expect(isExtension(node), "type").toBeTrue();
-			let part = newBranch();
+			const part = newBranch();
 			part.children[0] = newLeaf(Uint8Array.of(), Uint8Array.of(1));
 			part.children[1] = newLeaf(Uint8Array.of(), Uint8Array.of(2));
 			const trunk = copyNode(node);
@@ -97,7 +95,7 @@ describe("surgery", () => {
 		});
 
 		test("extension (depth = length)", () => {
-			let node = undefined;
+			let node: MaybeNode;
 			node = insertLeaf(node, Uint8Array.of(0, 0), Uint8Array.of(1));
 			node = insertLeaf(node, Uint8Array.of(0, 1), Uint8Array.of(2));
 			expect(isExtension(node), "type").toBeTrue();
@@ -114,20 +112,20 @@ describe("surgery", () => {
 		});
 
 		test("complex", () => {
-			let node = undefined;
+			let node: MaybeNode;
 			node = insertLeaf(node, Uint8Array.of(0, 0, 0, 0), Uint8Array.of(1));
 			node = insertLeaf(node, Uint8Array.of(0, 0, 0, 1), Uint8Array.of(2));
 			node = insertLeaf(node, Uint8Array.of(1, 0, 0, 0), Uint8Array.of(3));
 			node = insertLeaf(node, Uint8Array.of(2, 3, 4, 5), Uint8Array.of(4));
 			node = insertLeaf(node, Uint8Array.of(2, 3, 4, 6), Uint8Array.of(5));
-			let part0 = newBranch();
+			const part0 = newBranch();
 			part0.children[0] = { path: Uint8Array.of(0, 0), child: newBranch() };
 			part0.children[1] = newLeaf(Uint8Array.of(0, 0, 0), Uint8Array.of(3));
 			part0.children[2] = { path: Uint8Array.of(3, 4), child: newBranch() };
-			let part1 = newBranch();
+			const part1 = newBranch();
 			part1.children[0] = newLeaf(Uint8Array.of(), Uint8Array.of(1));
 			part1.children[1] = newLeaf(Uint8Array.of(), Uint8Array.of(2));
-			let part2 = newBranch();
+			const part2 = newBranch();
 			part2.children[5] = newLeaf(Uint8Array.of(), Uint8Array.of(4));
 			part2.children[6] = newLeaf(Uint8Array.of(), Uint8Array.of(5));
 			const trunk = copyNode(node);
@@ -163,7 +161,7 @@ describe("surgery", () => {
 	test("getProof", () => {
 		const path = Uint8Array.of(0, 0, 0);
 
-		let a = undefined;
+		let a: MaybeNode;
 		a = insertLeaf(a, path, Uint8Array.of(1));
 		a = insertLeaf(a, Uint8Array.of(0, 0, 1), Uint8Array.of(2));
 		a = insertLeaf(a, Uint8Array.of(1, 0, 0), Uint8Array.of(3));
@@ -177,15 +175,16 @@ describe("surgery", () => {
 		const trunk = copyNode(a);
 		const limbs = pluckLimbs(trunk, depth);
 
-		// "cache" only in trunk
+		// "cache" and "hash" only in trunk
 		expect(Object.keys(trunk), "keys:trunk").toStrictEqual([
 			"children",
 			"cache",
+			"hash",
 		]);
 		expect(
 			Object.keys((trunk as any)?.children[1]?.child),
 			"keys:trunk1",
-		).toStrictEqual(["children", "cache"]);
+		).toStrictEqual(["children", "cache"]); // < 32 bytes: inlined, never hashed
 		expect(Object.keys(limbs[0][1]), "keys:limb1").toStrictEqual(["children"]);
 		expect(getRootHash(trunk), "hash").toStrictEqual(rootHash);
 

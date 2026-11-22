@@ -1,24 +1,23 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
+import { keccak256, toHex } from "viem";
+import { insertBytes } from "../src/kv.js";
 import {
-	type MaybeNode,
 	deleteNode,
 	getRootHash,
 	insertLeaf,
+	type MaybeNode,
 	toNibblePath,
 } from "../src/trie.js";
-import { keccak256, toBigInt, toBytes, toHex } from "../src/utils.js";
-import { insertBytes, type InsertMode } from "../src/kv.js";
-import { randomBytes, randomInt, randomTrie, type TrieEntry } from "./utils.js";
+import { toBigInt, toBytes } from "../src/utils.js";
 import { ethGetProof } from "./rpc.js";
+import { randomBytes, randomInt, randomTrie, type TrieEntry } from "./utils.js";
 
 describe("storage", async () => {
 	const F = await Foundry.launch({ infoLog: false });
 	afterAll(F.shutdown);
 
 	const FUZZ = 20; // samples
-
-	const mode: InsertMode = "zero"; // forge zeros instead of deletes
 
 	test("empty", async () => {
 		const C = await F.deploy(`contract X {}`);
@@ -53,9 +52,9 @@ describe("storage", async () => {
 		await F.confirm(C.set(v));
 		const { storageHash } = await ethGetProof(F.provider, C.target);
 		const key = toBytes(0, 32);
-		let node = undefined;
-		node = insertLeaf(node, toNibblePath(keccak256(key)), toBytes(header));
-		node = insertBytes(node, key, v, mode);
+		let node: MaybeNode;
+		node = insertLeaf(node, toNibblePath(keccak256(key, "bytes")), toBytes(header));
+		node = insertBytes(node, key, v);
 		expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
 	});
 
@@ -72,9 +71,9 @@ describe("storage", async () => {
 		await F.confirm(C.set(v2));
 		const { storageHash } = await ethGetProof(F.provider, C.target);
 		const key = toBytes(0, 32);
-		let node = undefined;
-		node = insertBytes(node, key, v1, mode);
-		node = insertBytes(node, key, v2, mode);
+		let node: MaybeNode;
+		node = insertBytes(node, key, v1);
+		node = insertBytes(node, key, v2);
 		expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
 	});
 
@@ -140,7 +139,7 @@ describe("storage", async () => {
 				);
 				const { storageHash } = await ethGetProof(F.provider, C.target);
 				const node = kv.reduce<MaybeNode>(
-					(a, [k, v]) => insertBytes(a, k, v, mode),
+					(a, [k, v]) => insertBytes(a, k, v),
 					undefined,
 				);
 				expect(toHex(getRootHash(node))).toStrictEqual(storageHash);

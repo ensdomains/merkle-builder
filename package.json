@@ -1,35 +1,40 @@
 {
 	"name": "@ensdomains/merkle-builder",
-	"version": "0.0.5",
-	"description": "Low-level Merkle-Patricia storage trie implementation",
+	"version": "0.2.0",
+	"description": "Rebuild contract storage tries (Ethereum Merkle-Patricia, Linea sparse Merkle) and generate eth_getProof / linea_getProof",
 	"type": "module",
-	"main": "dist/index.cjs",
-	"module": "dist/index.js",
-	"types": "dist/index.d.ts",
-	"files": [
-		"./dist"
-	],
 	"exports": {
 		".": {
-			"import": "./dist/index.js",
-			"require": "./dist/index.cjs"
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
 		}
 	},
-	"devDependencies": {
-		"@adraffy/blocksmith": "^0.1.57",
-		"@types/bun": "latest",
-		"ethers": "^6.15.0",
-		"tsup": "^8.5.1"
-	},
-	"peerDependencies": {
-		"typescript": "^5"
-	},
-	"dependencies": {
-		"@adraffy/keccak": "^1.3.4"
+	"files": [
+		"dist",
+		"src"
+	],
+	"sideEffects": false,
+	"engines": {
+		"node": ">=22"
 	},
 	"scripts": {
-		"fuzz": "while true; do bun test test/storage.test.ts; done",
-		"build": "tsup src/index.ts --dts --format esm,cjs --out-dir dist"
+		"build": "rm -rf dist && tsc -p tsconfig.build.json",
+		"check": "tsc",
+		"lint": "biome check",
+		"lint:fix": "biome check --write",
+		"test": "bun test",
+		"fuzz": "while bun test test/storage.test.ts; do :; done",
+		"prepublishOnly": "bun run check && bun test && bun run build"
+	},
+	"peerDependencies": {
+		"viem": "^2.30.0"
+	},
+	"devDependencies": {
+		"@adraffy/blocksmith": "^0.1.60",
+		"@biomejs/biome": "^2.6.8",
+		"@types/bun": "^1.4.5",
+		"typescript": "^7.0.2",
+		"viem": "^2.58.4"
 	},
 	"license": "MIT",
 	"homepage": "https://github.com/ensdomains/merkle-builder#readme",
@@ -37,12 +42,21 @@
 		"type": "git",
 		"url": "git+https://github.com/ensdomains/merkle-builder.git"
 	},
+	"bugs": {
+		"url": "https://github.com/ensdomains/merkle-builder/issues"
+	},
 	"keywords": [
 		"Ethereum",
 		"Solidity",
 		"Merkle",
 		"Trie",
+		"Linea",
+		"Poseidon2",
 		"eth_getProof",
-		"eth_getStorageAt"
-	]
+		"eth_getStorageAt",
+		"linea_getProof"
+	],
+	"dependencies": {
+		"@adraffy/keccak": "^1.3.4"
+	}
 }

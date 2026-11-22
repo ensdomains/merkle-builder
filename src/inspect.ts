@@ -13,7 +13,9 @@ export function getByteCount(
 	} else {
 		return node.children.reduce(
 			(a, x) => a + getByteCount(x, sizeOf),
-			(node.cache ? sizeOf(node.cache) : 0) + node.children.length
+			(node.cache ? sizeOf(node.cache) : 0) +
+				(node.hash ? sizeOf(node.hash) : 0) +
+				node.children.length
 		);
 	}
 }

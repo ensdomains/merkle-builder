@@ -1,13 +1,13 @@
+import { concat, toHex } from "viem";
 import {
 	EMPTY_BYTES,
 	isBranch,
 	isExtension,
+	type MaybeNode,
 	newBranch,
 	newLeaf,
-	type MaybeNode,
 } from "./trie.js";
-import { concat, toBytes } from "./utils.js";
-import { hex_from_bytes } from "@adraffy/keccak"; // skips "0x"
+import { toBytes } from "./utils.js";
 
 const MORE = {
 	[Symbol.for("nodejs.util.inspect.custom")]() {
@@ -15,25 +15,26 @@ const MORE = {
 	},
 };
 
-export function toJSON(node: MaybeNode, depth = Infinity): any {
+export function toJSON(node: MaybeNode, depth = Infinity): unknown {
 	if (!node) return null;
 	if (depth < 0) return MORE;
 	if (isBranch(node)) {
 		return Object.fromEntries(
 			node.children.flatMap((x, i) =>
-				x ? [[toNibbleChar(i), x && toJSON(x, depth - 1)]] : [],
+				x ? [[toNibbleChar(i), toJSON(x, depth - 1)]] : [],
 			),
 		);
 	} else if (isExtension(node)) {
 		return [nibbleStr(node.path), toJSON(node.child, depth - 1)];
 	} else if (node.path.length) {
-		return [nibbleStr(node.path), hex_from_bytes(node.data)];
+		return [nibbleStr(node.path), toHex(node.data).slice(2)];
 	} else {
-		return hex_from_bytes(node.data);
+		return toHex(node.data).slice(2);
 	}
 }
 
-export function fromJSON(json: any): MaybeNode {
+export function fromJSON(json: unknown): MaybeNode {
+	if (json === MORE) throw new TypeError("cannot decode depth-limited json");
 	switch (typeof json) {
 		case "string":
 			return newLeaf(EMPTY_BYTES, toBytes(json));
@@ -45,9 +46,9 @@ export function fromJSON(json: any): MaybeNode {
 				if (isBranch(child)) {
 					return { path, child };
 				} else if (isExtension(child)) {
-					return { path: concat(path, child.path), child: child.child };
+					return { path: concat([path, child.path]), child: child.child };
 				} else if (child) {
-					return newLeaf(concat(path, child.path), child.data);
+					return newLeaf(concat([path, child.path]), child.data);
 				}
 			} else if (json.constructor === Object) {
 				const b = newBranch();

@@ -1,8 +1,11 @@
 export * from "./coder.js";
+export * from "./eth.js";
 export * from "./inspect.js";
 export * from "./json.js";
 export * from "./kv.js";
-export * from "./mimc.js";
+export * from "./linea.js";
+export * from "./poseidon2.js";
+export * from "./storage.js";
 export * from "./surgery.js";
 export * from "./trie.js";
-export * from "./utils.js";
+export { followSlot, toBigInt, toWord, trimLeadingZeros } from "./utils.js";

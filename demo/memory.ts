@@ -1,20 +1,20 @@
-import { parseArgs } from "node:util";
 import { Database } from "bun:sqlite";
+import { parseArgs } from "node:util";
 import { deepEquals } from "bun";
+import { type Hex, keccak256, toHex } from "viem";
 import { Coder } from "../src/coder.js";
+import { getByteCount, getNodeCount } from "../src/inspect.js";
 import { insertBytes } from "../src/kv.js";
-import { keccak256, toHex, type Hex } from "../src/utils.js";
+import { graftLimb, pluckLimbs } from "../src/surgery.js";
 import {
 	copyNode,
 	findLeaf,
 	getProof,
 	getRootHash,
-	toNibblePath,
 	type MaybeNode,
+	toNibblePath,
 } from "../src/trie.js";
 import { determineChain, getPrimarySlot, KNOWN_ADDRS } from "./registrar.js";
-import { getByteCount, getNodeCount } from "../src/inspect.js";
-import { graftLimb, pluckLimbs } from "../src/surgery.js";
 
 const args = parseArgs({
 	options: {
@@ -27,7 +27,7 @@ const args = parseArgs({
 const chainInfo = determineChain(args.values.chain);
 console.log(`Chain: ${chainInfo.name}`);
 
-const depth = parseInt(args.values.depth);
+const depth = parseInt(args.values.depth, 10);
 console.log(`Depth: ${depth}`);
 
 const db = new Database(`${import.meta.dir}/${chainInfo.name}.sqlite`);
@@ -90,9 +90,19 @@ const limbs2 = Array.from({ length: coder.readSize() }, () => [
 	coder.readNode(),
 ]);
 console.timeEnd("read");
+// hashes are not serialized (derived from cache), so compare re-encoded bytes
+const encoded = (x: MaybeNode) => {
+	const c = new Coder();
+	c.writeNode(x);
+	return c.bytes;
+};
 console.log("Coder:", {
-	sameTrunk: deepEquals(trunk, trunk2),
-	sameLimbs: deepEquals(limbs, limbs2),
+	sameTrunk: deepEquals(encoded(trunk), encoded(trunk2)),
+	sameLimbs: limbs.every(
+		([path, limb], i) =>
+			deepEquals(path, limbs2[i][0]) &&
+			deepEquals(encoded(limb), encoded(limbs2[i][1] as MaybeNode)),
+	),
 });
 
 // join
@@ -136,7 +146,7 @@ function lookup(address: Hex, loadTrunk: boolean) {
 		? new Coder(select.get(new Uint8Array(0))!.value).readNode()
 		: copyNode(trunk);
 	const slot = getPrimarySlot(address);
-	const path = toNibblePath(keccak256(slot));
+	const path = toNibblePath(keccak256(slot, "bytes"));
 	const part = path.subarray(0, depth);
 	const limb = select.get(part)?.value;
 	if (limb) {

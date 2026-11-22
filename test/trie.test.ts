@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { keccak256 } from "viem";
 import {
 	copyNode,
 	deleteNode,
@@ -8,10 +9,10 @@ import {
 	isBranch,
 	isExtension,
 	isLeaf,
-	toNibblePath,
 	type LeafNode,
+	type MaybeNode,
+	toNibblePath,
 } from "../src/trie.js";
-import { keccak256 } from "../src/utils.js";
 import { randomTrie } from "./utils.js";
 
 describe("trie", () => {
@@ -25,7 +26,7 @@ describe("trie", () => {
 				const { node, storage } = randomTrie();
 				for (const [k, v] of storage) {
 					expect(
-						findLeaf(node, toNibblePath(keccak256(k)))?.data
+						findLeaf(node, toNibblePath(keccak256(k, "bytes")))?.data
 					).toStrictEqual(v);
 				}
 			});
@@ -74,8 +75,7 @@ describe("trie", () => {
 			//    0*
 			//   / \
 			// [0] [1]
-			let a = undefined;
-			a = insertLeaf(a, Uint8Array.of(0, 0), Uint8Array.of(1));
+			const a = insertLeaf(undefined, Uint8Array.of(0, 0), Uint8Array.of(1));
 			expect(isLeaf(a)).toBeTrue();
 			expect(deleteNode(a, Uint8Array.of(0))).toBeUndefined();
 		});
@@ -86,12 +86,11 @@ describe("trie", () => {
 			//    0*   1
 			//   / \    \
 			// [0] [1]   [1]
-			let a = undefined;
+			let a: MaybeNode;
 			a = insertLeaf(a, Uint8Array.of(0, 0), Uint8Array.of(1));
 			a = insertLeaf(a, Uint8Array.of(0, 1), Uint8Array.of(1));
 			a = insertLeaf(a, Uint8Array.of(1, 1), Uint8Array.of(1));
-			let b = undefined;
-			b = insertLeaf(b, Uint8Array.of(1, 1), Uint8Array.of(1));
+			const b = insertLeaf(undefined, Uint8Array.of(1, 1), Uint8Array.of(1));
 			expect(isBranch(a)).toBeTrue();
 			expect(deleteNode(a, Uint8Array.of(0))).toStrictEqual(b);
 			expect(isLeaf(b));
@@ -103,11 +102,11 @@ describe("trie", () => {
 			//    0*   1        [0]  [1]
 			//   /    / \
 			// [0]  [0] [1]
-			let a = undefined;
+			let a: MaybeNode;
 			a = insertLeaf(a, Uint8Array.of(0, 0), Uint8Array.of(1));
 			a = insertLeaf(a, Uint8Array.of(1, 0), Uint8Array.of(1));
 			a = insertLeaf(a, Uint8Array.of(1, 1), Uint8Array.of(1));
-			let b = undefined;
+			let b: MaybeNode;
 			b = insertLeaf(b, Uint8Array.of(1, 0), Uint8Array.of(1));
 			b = insertLeaf(b, Uint8Array.of(1, 1), Uint8Array.of(1));
 			expect(isBranch(a)).toBeTrue();
@@ -121,7 +120,7 @@ describe("trie", () => {
 			//   (0)*
 			//   / \
 			// [0] [1]
-			let a = undefined;
+			let a: MaybeNode;
 			a = insertLeaf(a, Uint8Array.of(0, 0), Uint8Array.of(1));
 			a = insertLeaf(a, Uint8Array.of(0, 1), Uint8Array.of(1));
 			expect(isExtension(a)).toBeTrue();
@@ -134,14 +133,64 @@ describe("trie", () => {
 			//   (0)
 			//   /  \
 			// [0]* [1]
-			let a = undefined;
+			let a: MaybeNode;
 			a = insertLeaf(a, Uint8Array.of(0, 0), Uint8Array.of(1));
 			a = insertLeaf(a, Uint8Array.of(0, 1), Uint8Array.of(1));
-			let b = undefined;
-			b = insertLeaf(b, Uint8Array.of(0, 1), Uint8Array.of(1));
+			const b = insertLeaf(undefined, Uint8Array.of(0, 1), Uint8Array.of(1));
 			expect(isExtension(a)).toBeTrue();
 			expect(deleteNode(a, Uint8Array.of(0, 0))).toStrictEqual(b);
 			expect(isLeaf(b)).toBeTrue();
 		});
+	});
+
+	describe("caching", () => {
+		test("no-op insert returns the same node", () => {
+			const { node, storage } = randomTrie();
+			getRootHash(node);
+			for (const [, v, path] of storage) {
+				expect(insertLeaf(node, path, v)).toBe(node!);
+			}
+		});
+
+		test("insert invalidates only the changed path", () => {
+			const { node, storage } = randomTrie(200);
+			getRootHash(node);
+			const [, , path] = storage[0];
+			const next = insertLeaf(node, path, Uint8Array.of(0xff));
+			// sibling subtrees are shared and keep their cached hash
+			const shared = (next as any).children.filter(
+				(x: any, i: number) => x && i !== path[0],
+			);
+			expect(shared.length).toBeGreaterThan(0);
+			for (const x of shared) {
+				expect((node as any).children.includes(x)).toBeTrue();
+			}
+			expect((next as any).hash).toBeUndefined();
+		});
+
+		for (let i = 0; i < 5; i++) {
+			test(`incremental root == rebuilt root #${i}`, () => {
+				const { storage } = randomTrie(300);
+				let node: MaybeNode;
+				const live = new Map<string, [Uint8Array, Uint8Array]>();
+				for (let j = 0; j < storage.length; j++) {
+					const [k, v, path] = storage[j];
+					if (j % 7 === 3 && live.size) {
+						// delete a live key
+						const [key, [p]] = live.entries().next().value!;
+						node = deleteNode(node, p);
+						live.delete(key);
+					}
+					node = insertLeaf(node, path, v);
+					live.set(String(k), [path, v]);
+					getRootHash(node); // populate caches along the way
+				}
+				const rebuilt = [...live.values()].reduce<MaybeNode>(
+					(a, [p, v]) => insertLeaf(a, p, v),
+					undefined,
+				);
+				expect(getRootHash(node)).toStrictEqual(getRootHash(rebuilt));
+			});
+		}
 	});
 });
