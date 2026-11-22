@@ -5,7 +5,7 @@ import { Database } from "bun:sqlite";
 import { existsSync } from "node:fs";
 import { createPublicClient, http } from "viem";
 import * as chains from "viem/chains";
-import { type ChainInfo, determineChain, getDatabasePath } from "./registrar.js";
+import { type ChainInfo, determineChain, getDatabasePath } from "./ens-registrar.js";
 
 // "* ✅️ [`op`](...) &rarr; `125` names as of `2026-05-31`"
 // note: the README uses non-breaking spaces around &rarr;

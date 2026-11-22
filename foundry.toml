@@ -13,5 +13,7 @@ remappings = [
 ]
 
 # forge i foundry-rs/forge-std
-# forge i ensdomains/ens-contracts
+# forge i ensdomains/ens-contracts@staging
 # forge i OpenZeppelin/openzeppelin-contracts@release-v5.3
+#   ens-contracts gets openzeppelin from npm, so it must be installed separately
+#   (L2ReverseRegistrar imports @openzeppelin/contracts-v5)

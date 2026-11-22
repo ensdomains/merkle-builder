@@ -11,7 +11,7 @@ import {
 	getPrimarySlot,
 	getRegistrarAddress,
 	KNOWN_ADDRS,
-} from "./registrar.js";
+} from "./ens-registrar.js";
 
 const chainInfo = determineChain("linea");
 const registrarAddress = getRegistrarAddress(chainInfo.testnet);

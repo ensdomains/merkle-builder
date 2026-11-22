@@ -19,7 +19,7 @@ import {
 	getDatabasePath,
 	getPrimarySlot,
 	KNOWN_ADDRS,
-} from "./registrar.js";
+} from "./ens-registrar.js";
 
 const args = parseArgs({
 	options: {

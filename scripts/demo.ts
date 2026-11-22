@@ -21,7 +21,7 @@ import {
 	KNOWN_ADDRS,
 	REGISTRAR_ABI,
 	setOwner,
-} from "./registrar.js";
+} from "./ens-registrar.js";
 
 const args = parseArgs({
 	options: {
