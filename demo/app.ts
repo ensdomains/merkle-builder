@@ -26,6 +26,7 @@ const args = parseArgs({
 	options: {
 		chain: { type: "string", short: "c" },
 		noSync: { type: "boolean" },
+		readme: { type: "boolean" }, // update the README demo line for this chain
 	},
 	strict: true,
 });
@@ -147,6 +148,7 @@ const fakeClient = createPublicClient({
 });
 
 const slots = KNOWN_ADDRS.map(getPrimarySlot);
+let matched = true;
 
 for (const slot of slots) {
 	const [realStorage, fakeStorage] = await Promise.all(
@@ -158,6 +160,7 @@ for (const slot of slots) {
 		`eth_getStorageAt(${toHex(slot)}) Match:`,
 		realStorage === fakeStorage,
 	);
+	matched &&= realStorage === fakeStorage;
 }
 
 const [realProof, fakeProof] = await Promise.all(
@@ -169,13 +172,39 @@ const [realProof, fakeProof] = await Promise.all(
 		}),
 	),
 );
-console.log(
-	`eth_getProof[${slots.length}] Match:`,
-	extract(realProof) === extract(fakeProof),
-);
+const proofMatch = extract(realProof) === extract(fakeProof);
+console.log(`eth_getProof[${slots.length}] Match:`, proofMatch);
+matched &&= proofMatch;
+
+if (args.values.readme) {
+	await updateReadme();
+}
 
 db.close();
 process.exit(0);
+
+// rewrite this chain's README line: "* ✅️ [`op`](...) &rarr; `125` names as of `2026-05-31`"
+async function updateReadme() {
+	const { timestamp } = await realClient.getBlock({ blockNumber });
+	const date = new Date(Number(timestamp) * 1000).toISOString().slice(0, 10);
+	const count = db
+		.query<{ n: number }, [number]>("SELECT count(*) AS n FROM names WHERE block < ?")
+		.get(block0)!.n;
+	const file = Bun.file(`${import.meta.dir}/../README.md`);
+	const readme = await file.text();
+	// note: the README uses non-breaking spaces around &rarr;
+	const re = new RegExp(
+		`^(\\s*\\* )\\S+ (\\[\`${chainInfo.key}\`\\]\\([^)]*\\))(\\s)&rarr;(\\s)\`[\\d,]+\` names as of \`[\\d-]+\``,
+		"m",
+	);
+	if (!re.test(readme)) {
+		console.log(`README: no line for \`${chainInfo.key}\``);
+		return;
+	}
+	const line = `$1${matched ? "✅️" : "❌️"} $2$3&rarr;$4\`${count.toLocaleString("en-US")}\` names as of \`${date}\``;
+	await Bun.write(file, readme.replace(re, line));
+	console.log(`README: ${chainInfo.key} = ${count} names as of ${date} (${matched ? "match" : "MISMATCH"})`);
+}
 
 function extract({ storageHash, storageProof }: GetProofReturnType) {
 	return JSON.stringify({ storageHash, storageProof }, (_, x) =>
