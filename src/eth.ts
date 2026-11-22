@@ -19,33 +19,23 @@ export type EthStorageProof = {
 	proof: Hex[];
 };
 
-export type EthStorageOptions = {
-	// store zero words as empty leaves instead of deleting them (older anvil)
-	zeroLeaves?: boolean;
-};
-
 // Ethereum storage trie (Merkle-Patricia + keccak) of a single contract
 // node is immutable (copy-on-write), so snapshots are free: `const snap = storage.node`
 export class EthStorage extends SlotStorage {
-	readonly zeroLeaves: boolean;
-	constructor(
-		public node: MaybeNode = undefined,
-		{ zeroLeaves = false }: EthStorageOptions = {}
-	) {
+	constructor(public node: MaybeNode = undefined) {
 		super();
-		this.zeroLeaves = zeroLeaves;
 	}
 	static path(slot: Uint8Array): Uint8Array {
 		return toNibblePath(keccak256(slot, "bytes"));
 	}
 	clone(): EthStorage {
-		return new EthStorage(this.node, this);
+		return new EthStorage(this.node);
 	}
 	getStorage(slot: Uint8Array): Uint8Array {
 		return findLeaf(this.node, EthStorage.path(slot))?.data ?? EMPTY_BYTES;
 	}
 	setStorage(slot: Uint8Array, value: Uint8Array) {
-		this.node = setPath(this.node, EthStorage.path(slot), value, this.zeroLeaves);
+		this.node = setPath(this.node, EthStorage.path(slot), value);
 	}
 	get rootHash(): Uint8Array {
 		return getRootHash(this.node);
@@ -63,14 +53,12 @@ export class EthStorage extends SlotStorage {
 	}
 }
 
+// zero deletes the leaf
 export function setPath(
 	node: MaybeNode,
 	path: Uint8Array,
-	value: Uint8Array,
-	zeroLeaves = false
+	value: Uint8Array
 ): MaybeNode {
 	value = trimLeadingZeros(value);
-	return value.length || zeroLeaves
-		? insertLeaf(node, path, value)
-		: deleteNode(node, path);
+	return value.length ? insertLeaf(node, path, value) : deleteNode(node, path);
 }

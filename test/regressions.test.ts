@@ -71,7 +71,7 @@ describe("regressions", () => {
 		expect(toBytes(0)).toStrictEqual(p());
 	});
 
-	test("insertBytes: zeroLeaves / clearStale options", () => {
+	test("insertBytes: clearStale option", () => {
 		const slot = toBytes(0, 32);
 		const long = new Uint8Array(100).fill(1);
 		const node = insertBytes(undefined, slot, long);
@@ -81,9 +81,6 @@ describe("regressions", () => {
 		expect(findLeaf(insertBytes(node, slot, Uint8Array.of(1)), stale)).toBeUndefined();
 		// clearStale: false leaves them
 		expect(findLeaf(insertBytes(node, slot, Uint8Array.of(1), { clearStale: false }), stale)?.data).toStrictEqual(long.subarray(0, 32));
-		// zeroLeaves: true zeroes them
-		expect(findLeaf(insertBytes(node, slot, Uint8Array.of(1), { zeroLeaves: true }), stale)?.data).toStrictEqual(new Uint8Array(0));
 		expect(insertWord(undefined, slot, Uint8Array.of(0))).toBeUndefined();
-		expect(insertWord(undefined, slot, Uint8Array.of(0), { zeroLeaves: true })).toBeDefined();
 	});
 });
