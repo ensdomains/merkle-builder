@@ -1,9 +1,9 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
-import { getProof, toNibblePath } from "../src/trie.js";
-import { insertWord } from "../src/kv.js";
-import { EthStorage } from "../src/eth.js";
 import { keccak256, toHex } from "viem";
+import { EthStorage } from "../src/eth.js";
+import { insertWord } from "../src/kv.js";
+import { getProof, toNibblePath } from "../src/trie.js";
 import { toBigInt, toBytes } from "../src/utils.js";
 import { ethGetProof } from "./rpc.js";
 import { randomTrie } from "./utils.js";

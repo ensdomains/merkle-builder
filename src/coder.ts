@@ -3,8 +3,8 @@ import {
 	encodeNode,
 	isBranch,
 	isExtension,
-	toNibblePath,
 	type MaybeNode,
+	toNibblePath,
 } from "./trie.js";
 
 const TY_NULL = 0;

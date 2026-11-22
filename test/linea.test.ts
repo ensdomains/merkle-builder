@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { toHex } from "viem";
 import {
 	LineaStorage,
+	type LineaStorageProof,
 	lineaHashKey,
 	verifyLineaProof,
-	type LineaStorageProof,
 } from "../src/linea.js";
-import { toHex } from "viem";
 import { followSlot, toBytes } from "../src/utils.js";
-import { randomBytes, randomInt } from "./utils.js";
 import FIXTURE from "./fixtures/linea-proof.json" with { type: "json" };
+import { randomBytes, randomInt } from "./utils.js";
 
 function verifyAll(s: LineaStorage, p: LineaStorageProof) {
 	const root = s.rootHash;

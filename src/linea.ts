@@ -1,7 +1,7 @@
+import { concat, type Hex, toHex } from "viem";
 import { poseidon2, poseidon2Pad } from "./poseidon2.js";
 import { SlotStorage } from "./storage.js";
 import { EMPTY_BYTES } from "./trie.js";
-import { concat, type Hex, toHex } from "viem";
 import { equalBytes, toBytes, toWord, trimLeadingZeros } from "./utils.js";
 
 // Linea storage trie of a single contract (Shomei "ZK trie", Poseidon2/KoalaBear era)

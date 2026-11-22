@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { keccak256 } from "viem";
+import { Coder } from "../src/coder.js";
+import { insertBytes, insertWord } from "../src/kv.js";
 import {
 	deleteNode,
 	encodeNode,
@@ -6,12 +9,9 @@ import {
 	getRootHash,
 	insertLeaf,
 	isExtension,
-	toNibblePath,
 	type MaybeNode,
+	toNibblePath,
 } from "../src/trie.js";
-import { insertBytes, insertWord } from "../src/kv.js";
-import { Coder } from "../src/coder.js";
-import { keccak256 } from "viem";
 import { toBytes } from "../src/utils.js";
 
 const p = (...v: number[]) => Uint8Array.from(v);

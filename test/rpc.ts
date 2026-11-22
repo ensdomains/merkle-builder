@@ -1,5 +1,5 @@
-import type { EthStorageProof } from "../src/eth.js";
 import { type Hex, toHex } from "viem";
+import type { EthStorageProof } from "../src/eth.js";
 
 export interface RawProvider {
 	send(method: string, params: any[]): Promise<any>;

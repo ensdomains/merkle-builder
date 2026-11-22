@@ -1,14 +1,14 @@
-import { inspect } from "bun";
 import { randomBytes, randomInt } from "node:crypto";
-import { insertLeaf, toNibblePath, type MaybeNode } from "../src/trie.js";
+import { inspect } from "bun";
 import { keccak256, toHex } from "viem";
+import { insertLeaf, type MaybeNode, toNibblePath } from "../src/trie.js";
 import { trimLeadingZeros } from "../src/utils.js";
 
 export function dump(x: unknown) {
 	console.log(inspect(x, { depth: Infinity, colors: true }));
 }
 
-export { randomInt, randomBytes };
+export { randomBytes, randomInt };
 
 export type TrieEntry = [key: Uint8Array, value: Uint8Array, path: Uint8Array];
 

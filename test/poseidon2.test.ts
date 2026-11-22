@@ -1,10 +1,10 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
-import { poseidon2, poseidon2Pad } from "../src/poseidon2.js";
 import { concat, toHex } from "viem";
+import { poseidon2, poseidon2Pad } from "../src/poseidon2.js";
 import { toBytes } from "../src/utils.js";
-import { randomBytes } from "./utils.js";
 import VECTORS from "./fixtures/poseidon2-vectors.json" with { type: "json" };
+import { randomBytes } from "./utils.js";
 
 describe("poseidon2", async () => {
 	test("vectors", () => {

@@ -1,3 +1,6 @@
+import keccak256 from "@adraffy/keccak/256";
+import { type Hex, toHex } from "viem";
+import { SlotStorage } from "./storage.js";
 import {
 	deleteNode,
 	EMPTY_BYTES,
@@ -5,12 +8,9 @@ import {
 	getProof,
 	getRootHash,
 	insertLeaf,
-	toNibblePath,
 	type MaybeNode,
+	toNibblePath,
 } from "./trie.js";
-import { SlotStorage } from "./storage.js";
-import keccak256 from "@adraffy/keccak/256";
-import { type Hex, toHex } from "viem";
 import { toBigInt, trimLeadingZeros } from "./utils.js";
 
 // storageProof[] entry of eth_getProof

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { keccak256 } from "viem";
 import {
 	copyNode,
 	deleteNode,
@@ -8,11 +9,10 @@ import {
 	isBranch,
 	isExtension,
 	isLeaf,
-	toNibblePath,
 	type LeafNode,
 	type MaybeNode,
+	toNibblePath,
 } from "../src/trie.js";
-import { keccak256 } from "viem";
 import { randomTrie } from "./utils.js";
 
 describe("trie", () => {

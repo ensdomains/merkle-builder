@@ -1,17 +1,17 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
+import { keccak256, toHex } from "viem";
+import { insertBytes } from "../src/kv.js";
 import {
-	type MaybeNode,
 	deleteNode,
 	getRootHash,
 	insertLeaf,
+	type MaybeNode,
 	toNibblePath,
 } from "../src/trie.js";
-import { keccak256, toHex } from "viem";
 import { toBigInt, toBytes } from "../src/utils.js";
-import { insertBytes } from "../src/kv.js";
-import { randomBytes, randomInt, randomTrie, type TrieEntry } from "./utils.js";
 import { ethGetProof } from "./rpc.js";
+import { randomBytes, randomInt, randomTrie, type TrieEntry } from "./utils.js";
 
 describe("storage", async () => {
 	const F = await Foundry.launch({ infoLog: false });

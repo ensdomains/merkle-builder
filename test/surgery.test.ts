@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { graftLimb, pluckLimbs } from "../src/surgery.js";
 import {
 	copyNode,
 	getProof,
@@ -6,11 +7,10 @@ import {
 	insertLeaf,
 	isExtension,
 	isLeaf,
+	type MaybeNode,
 	newBranch,
 	newLeaf,
-	type MaybeNode,
 } from "../src/trie.js";
-import { graftLimb, pluckLimbs } from "../src/surgery.js";
 import { randomTrie } from "./utils.js";
 
 describe("surgery", () => {

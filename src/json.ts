@@ -1,12 +1,12 @@
+import { concat, toHex } from "viem";
 import {
 	EMPTY_BYTES,
 	isBranch,
 	isExtension,
+	type MaybeNode,
 	newBranch,
 	newLeaf,
-	type MaybeNode,
 } from "./trie.js";
-import { concat, toHex } from "viem";
 import { toBytes } from "./utils.js";
 
 const MORE = {

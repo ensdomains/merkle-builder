@@ -1,14 +1,14 @@
-import { parseArgs } from "node:util";
 import { Database } from "bun:sqlite";
+import { parseArgs } from "node:util";
 import {
 	BaseError,
 	createPublicClient,
 	custom,
+	type GetProofReturnType,
 	getAbiItem,
 	http,
-	toHex,
-	type GetProofReturnType,
 	type PublicClient,
+	toHex,
 } from "viem";
 import { EthStorage } from "../src/eth.js";
 import { toBytes, toWord } from "../src/utils.js";

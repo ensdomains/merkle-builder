@@ -1,20 +1,20 @@
-import { parseArgs } from "node:util";
 import { Database } from "bun:sqlite";
+import { parseArgs } from "node:util";
 import { deepEquals } from "bun";
-import { Coder } from "../src/coder.js";
-import { insertBytes } from "../src/kv.js";
 import { type Hex, keccak256, toHex } from "viem";
+import { Coder } from "../src/coder.js";
+import { getByteCount, getNodeCount } from "../src/inspect.js";
+import { insertBytes } from "../src/kv.js";
+import { graftLimb, pluckLimbs } from "../src/surgery.js";
 import {
 	copyNode,
 	findLeaf,
 	getProof,
 	getRootHash,
-	toNibblePath,
 	type MaybeNode,
+	toNibblePath,
 } from "../src/trie.js";
 import { determineChain, getPrimarySlot, KNOWN_ADDRS } from "./registrar.js";
-import { getByteCount, getNodeCount } from "../src/inspect.js";
-import { graftLimb, pluckLimbs } from "../src/surgery.js";
 
 const args = parseArgs({
 	options: {

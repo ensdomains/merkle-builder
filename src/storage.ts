@@ -1,5 +1,5 @@
-import { EMPTY_BYTES } from "./trie.js";
 import keccak256 from "@adraffy/keccak/256";
+import { EMPTY_BYTES } from "./trie.js";
 import { toBigInt, toBytes, toWord } from "./utils.js";
 
 // word-level view of a contract's storage + solidity layout helpers

@@ -1,11 +1,11 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
-import { getRootHash, type MaybeNode } from "../src/trie.js";
-import { insertBytes } from "../src/kv.js";
 import { toHex } from "viem";
-import { toBytes, followSlot } from "../src/utils.js";
-import { randomBytes, randomInt } from "./utils.js";
+import { insertBytes } from "../src/kv.js";
+import { getRootHash, type MaybeNode } from "../src/trie.js";
+import { followSlot, toBytes } from "../src/utils.js";
 import { ethGetProof } from "./rpc.js";
+import { randomBytes, randomInt } from "./utils.js";
 
 describe("registrar", async () => {
 	const F = await Foundry.launch({ infoLog: false }); // enable to show events

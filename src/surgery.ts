@@ -1,9 +1,9 @@
 import {
 	isBranch,
 	isExtension,
-	newBranch,
 	type MaybeNode,
 	type Node,
+	newBranch,
 } from "./trie.js";
 
 // warning: these operations (when unpaired) violate the trie invariants!

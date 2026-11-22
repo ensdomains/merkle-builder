@@ -1,6 +1,5 @@
-import { parseAbi } from "viem";
+import { type Hex, parseAbi } from "viem";
 import type { SlotStorage } from "../src/storage.js";
-import { type Hex } from "viem";
 import { followSlot, toBytes } from "../src/utils.js";
 
 // https://docs.ens.domains/ensip/19/#annex-supported-chains
