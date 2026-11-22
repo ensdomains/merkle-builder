@@ -1,5 +1,4 @@
 import { EthStorage } from "./eth.js";
-import type { SetBytesOptions } from "./storage.js";
 import type { MaybeNode } from "./trie.js";
 
 // functional wrappers around EthStorage
@@ -19,10 +18,9 @@ export function insertWord(
 export function insertBytes(
 	node: MaybeNode,
 	slot: Uint8Array,
-	value: Uint8Array,
-	options?: SetBytesOptions
+	value: Uint8Array
 ): MaybeNode {
 	const s = new EthStorage(node);
-	s.setBytes(slot, value, options);
+	s.setBytes(slot, value);
 	return s.node;
 }

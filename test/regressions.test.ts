@@ -72,16 +72,13 @@ describe("regressions", () => {
 		expect(toBytes(0)).toStrictEqual(p());
 	});
 
-	test("insertBytes: clearStale option", () => {
+	test("insertBytes: stale data slots are cleared", () => {
 		const slot = toBytes(0, 32);
 		const long = new Uint8Array(100).fill(1);
 		const node = insertBytes(undefined, slot, long);
 		const stale = toNibblePath(keccak256(keccak256(slot, "bytes"), "bytes")); // first data slot
 		expect(findLeaf(node, stale)).toBeDefined();
-		// default: stale data slots are removed
 		expect(findLeaf(insertBytes(node, slot, Uint8Array.of(1)), stale)).toBeUndefined();
-		// clearStale: false leaves them
-		expect(findLeaf(insertBytes(node, slot, Uint8Array.of(1), { clearStale: false }), stale)?.data).toStrictEqual(long.subarray(0, 32));
 		expect(insertWord(undefined, slot, Uint8Array.of(0))).toBeUndefined();
 	});
 

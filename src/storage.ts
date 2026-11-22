@@ -2,11 +2,6 @@ import { EMPTY_BYTES } from "./trie.js";
 import { keccak256 } from "viem";
 import { toBigInt, toBytes, toWord } from "./utils.js";
 
-export type SetBytesOptions = {
-	// zero the data slots of a prior longer value (default: true, matches solidity)
-	clearStale?: boolean;
-};
-
 // word-level view of a contract's storage + solidity layout helpers
 export abstract class SlotStorage {
 	// returns the trimmed big-endian word (empty if zero)
@@ -16,13 +11,10 @@ export abstract class SlotStorage {
 
 	// write value using the solidity "bytes" / "string" storage layout
 	// https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#bytes-and-string
-	setBytes(
-		slot: Uint8Array,
-		value: Uint8Array,
-		{ clearStale = true }: SetBytesOptions = {}
-	) {
+	// data slots of a prior longer value are cleared (like solidity)
+	setBytes(slot: Uint8Array, value: Uint8Array) {
 		assertSlot(slot);
-		const oldSize = clearStale ? getLongSize(this.getStorage(slot)) : 0;
+		const oldSize = getLongSize(this.getStorage(slot));
 		const key = keccak256(slot, "bytes"); // first data slot (mutated by increment)
 		let pos = 0;
 		if (value.length < 32) {
