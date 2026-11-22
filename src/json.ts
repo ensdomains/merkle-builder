@@ -34,6 +34,7 @@ export function toJSON(node: MaybeNode, depth = Infinity): unknown {
 }
 
 export function fromJSON(json: unknown): MaybeNode {
+	if (json === MORE) throw new TypeError("cannot decode depth-limited json");
 	switch (typeof json) {
 		case "string":
 			return newLeaf(EMPTY_BYTES, toBytes(json));
