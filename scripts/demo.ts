@@ -31,7 +31,6 @@ const args = parseArgs({
 	strict: true,
 });
 
-// colors are disabled when piped or with NO_COLOR
 const dim = (s: string) => styleText("dim", s);
 const bold = (s: string) => styleText("bold", s);
 const cyan = (s: string) => styleText("cyan", s);
@@ -41,8 +40,7 @@ const red = (s: string) => styleText("red", s);
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 const SEP = dim(" · ");
 
-// on a terminal the sync progress line is redrawn in place
-const TTY = !!process.stdout.isTTY;
+// the sync progress line is redrawn in place (the demo is run from a terminal)
 let progressShown = false;
 function log(line: string) {
 	if (progressShown) {
@@ -52,12 +50,8 @@ function log(line: string) {
 	console.log(line);
 }
 function progress(line: string) {
-	if (TTY) {
-		process.stdout.write(`\r\x1b[2K${line}`);
-		progressShown = true;
-	} else {
-		console.log(line);
-	}
+	process.stdout.write(`\r\x1b[2K${line}`);
+	progressShown = true;
 }
 
 function info(label: string, value: string) {
@@ -66,6 +60,13 @@ function info(label: string, value: string) {
 
 function matched(label: string, ok: boolean) {
 	console.log(`${ok ? green("✓ match") : red("✗ MISMATCH")} ${label}`);
+}
+
+// wait time for a rate limited response (retry-after / x-ratelimit-reset)
+function rateLimitDelay(headers: Headers | undefined): number {
+	const seconds =
+		Number(headers?.get("retry-after")) || Number(headers?.get("x-ratelimit-reset"));
+	return (seconds || 1) * 1000;
 }
 
 function fmtDuration(seconds: number) {
@@ -298,6 +299,7 @@ async function sync() {
 }
 
 async function getLogs(client: PublicClient, block0: number, block1: number) {
+	let rateLimited = 0;
 	while (true) {
 		const count = 1 + block1 - block0;
 		try {
@@ -318,6 +320,23 @@ async function getLogs(client: PublicClient, block0: number, block1: number) {
 			}
 			return { logs, lastBlock: block1 };
 		} catch (err: unknown) {
+			// rate limited: wait and retry the same range (not a range problem)
+			const limited =
+				err instanceof BaseError &&
+				(err.walk((e) => (e as { status?: number }).status === 429) as
+					| { headers?: Headers }
+					| null);
+			if (limited) {
+				if (++rateLimited > 10) {
+					throw new Error(`rpc keeps rate limiting eth_getLogs: use a keyed provider`, {
+						cause: err,
+					});
+				}
+				const delay = rateLimitDelay(limited.headers);
+				log(yellow(`  getLogs: rate limited, waiting ${fmtDuration(delay / 1000)}`));
+				await Bun.sleep(delay);
+				continue;
+			}
 			// this error is thrown by drpc
 			const match =
 				err instanceof BaseError &&

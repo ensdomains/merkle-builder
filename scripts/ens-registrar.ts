@@ -104,7 +104,7 @@ function chainInfoFor(key: string): Omit<ChainInfo, "key"> {
 				id: 8453,
 				ownable: true,
 				explorer: "https://basescan.org",
-				publicRPC: "https://mainnet.base.org",
+				//publicRPC: "https://mainnet.base.org", // 20261122: rate limits every eth_getLogs
 				drpcSlug: "base",
 				alchemySlug: "base-mainnet",
 				createdAtBlock: 31808582,
