@@ -258,10 +258,10 @@ export function encodeNode(node: MaybeNode): Uint8Array {
 	if (!node) {
 		return RLP_NULL;
 	} else if (isBranch(node)) {
-		return (node.cache ??= encodeRlpList([
-			...node.children.map(encodeNodeRef),
-			RLP_NULL,
-		]));
+		if (!node.cache) {
+			node.cache = encodeRlpList([...node.children.map(encodeNodeRef), RLP_NULL]);
+		}
+		return node.cache;
 	} else if (isExtension(node)) {
 		return encodeRlpList([
 			encodeRlpBytes(encodePath(node.path, false)),
@@ -283,9 +283,9 @@ function encodeNodeRef(node: MaybeNode) {
 
 // keccak256(encodeNode(node)), cached on branches
 function hashNode(node: Node, v = encodeNode(node)): Uint8Array {
-	return isBranch(node)
-		? (node.hash ??= keccak256(v))
-		: keccak256(v);
+	if (!isBranch(node)) return keccak256(v);
+	if (!node.hash) node.hash = keccak256(v);
+	return node.hash;
 }
 
 export function clearCache(node: MaybeNode) {

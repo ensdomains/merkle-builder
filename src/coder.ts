@@ -82,7 +82,9 @@ export class Coder {
 	readBytes(n: number) {
 		if (!n) return EMPTY_BYTES;
 		this.require(n);
-		return this.buf.slice(this.pos, (this.pos += n));
+		const v = this.buf.slice(this.pos, this.pos + n);
+		this.pos += n;
+		return v;
 	}
 	writeBytes(v: Uint8Array) {
 		this.expand(v.length);

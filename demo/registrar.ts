@@ -52,13 +52,13 @@ export type ChainInfo = {
 };
 
 export function determineProvider(info: ChainInfo, proto = "https") {
-	let key: string | undefined;
-	if ((key = process.env.RPC_URL)) {
-		return key; // explicit override (must support eth_getProof)
-	} else if (info.drpcSlug && (key = process.env.DRPC_KEY)) {
-		return `${proto}://lb.drpc.live/${info.drpcSlug}/${key}`;
-	} else if (info.alchemySlug && (key = process.env.ALCHEMY_KEY)) {
-		return `${proto}://${info.alchemySlug}.g.alchemy.com/v2/${key}`;
+	const { RPC_URL, DRPC_KEY, ALCHEMY_KEY } = process.env;
+	if (RPC_URL) {
+		return RPC_URL; // explicit override (must support eth_getProof)
+	} else if (info.drpcSlug && DRPC_KEY) {
+		return `${proto}://lb.drpc.live/${info.drpcSlug}/${DRPC_KEY}`;
+	} else if (info.alchemySlug && ALCHEMY_KEY) {
+		return `${proto}://${info.alchemySlug}.g.alchemy.com/v2/${ALCHEMY_KEY}`;
 	} else {
 		throw new Error(`missing .env: set RPC_URL, DRPC_KEY, or ALCHEMY_KEY`);
 	}

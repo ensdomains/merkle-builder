@@ -48,7 +48,7 @@ export class EthStorage extends SlotStorage {
 		const path = EthStorage.path(slot);
 		return {
 			key: toHex(slot),
-			value: `0x${toBigInt(findLeaf(this.node, path)?.data ?? EMPTY_BYTES).toString(16)}`,
+			value: toHex(toBigInt(findLeaf(this.node, path)?.data ?? EMPTY_BYTES)), // quantity
 			proof: getProof(this.node, path).map((x) => toHex(x)),
 		};
 	}
