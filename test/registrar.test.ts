@@ -2,7 +2,8 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
 import { getRootHash, type MaybeNode } from "../src/trie.js";
 import { insertBytes } from "../src/kv.js";
-import { toBytes, followSlot, toHex } from "../src/utils.js";
+import { toHex } from "viem";
+import { toBytes, followSlot } from "../src/utils.js";
 import { randomBytes, randomInt } from "./utils.js";
 import { ethGetProof } from "./rpc.js";
 

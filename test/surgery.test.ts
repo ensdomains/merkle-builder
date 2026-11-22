@@ -4,16 +4,14 @@ import {
 	getProof,
 	getRootHash,
 	insertLeaf,
-	isBranch,
 	isExtension,
 	isLeaf,
 	newBranch,
 	newLeaf,
-	type BranchNode,
 	type MaybeNode,
 } from "../src/trie.js";
 import { graftLimb, pluckLimbs } from "../src/surgery.js";
-import { dump, randomTrie } from "./utils.js";
+import { randomTrie } from "./utils.js";
 
 describe("surgery", () => {
 	describe("pluckLimbs", () => {

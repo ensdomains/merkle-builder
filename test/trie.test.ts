@@ -11,7 +11,7 @@ import {
 	toNibblePath,
 	type LeafNode,
 } from "../src/trie.js";
-import { keccak256 } from "../src/utils.js";
+import { keccak256 } from "viem";
 import { randomTrie } from "./utils.js";
 
 describe("trie", () => {
@@ -25,7 +25,7 @@ describe("trie", () => {
 				const { node, storage } = randomTrie();
 				for (const [k, v] of storage) {
 					expect(
-						findLeaf(node, toNibblePath(keccak256(k)))?.data
+						findLeaf(node, toNibblePath(keccak256(k, "bytes")))?.data
 					).toStrictEqual(v);
 				}
 			});

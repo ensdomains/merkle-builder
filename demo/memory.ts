@@ -3,7 +3,7 @@ import { Database } from "bun:sqlite";
 import { deepEquals } from "bun";
 import { Coder } from "../src/coder.js";
 import { insertBytes } from "../src/kv.js";
-import { keccak256, toHex, type Hex } from "../src/utils.js";
+import { type Hex, keccak256, toHex } from "viem";
 import {
 	copyNode,
 	findLeaf,
@@ -136,7 +136,7 @@ function lookup(address: Hex, loadTrunk: boolean) {
 		? new Coder(select.get(new Uint8Array(0))!.value).readNode()
 		: copyNode(trunk);
 	const slot = getPrimarySlot(address);
-	const path = toNibblePath(keccak256(slot));
+	const path = toNibblePath(keccak256(slot, "bytes"));
 	const part = path.subarray(0, depth);
 	const limb = select.get(part)?.value;
 	if (limb) {

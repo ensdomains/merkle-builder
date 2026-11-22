@@ -10,10 +10,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
 
@@ -33,5 +33,11 @@ jobs:
       - name: Install Solidity dependencies
         run: forge i
 
+      - name: Type check
+        run: bun run check
+
       - name: Run tests
         run: bun test
+
+      - name: Build
+        run: bun run build

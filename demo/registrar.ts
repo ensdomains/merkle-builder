@@ -1,12 +1,7 @@
-import { Interface } from "ethers";
-import { insertLeaf, toNibblePath, type MaybeNode } from "../src/trie.js";
-import {
-	followSlot,
-	keccak256,
-	toBytes,
-	trimLeadingZeros,
-	type Hex,
-} from "../src/utils.js";
+import { parseAbi } from "viem";
+import type { SlotStorage } from "../src/storage.js";
+import { type Hex } from "viem";
+import { followSlot, toBytes } from "../src/utils.js";
 
 // https://docs.ens.domains/ensip/19/#annex-supported-chains
 export function getRegistrarAddress(testnet?: boolean) {
@@ -19,17 +14,15 @@ export function getRegistrarAddress(testnet?: boolean) {
 // https://github.com/ensdomains/ens-contracts/blob/staging/contracts/reverseRegistrar/L2ReverseRegistrar.sol
 // https://github.com/ensdomains/ens-contracts/blob/staging/contracts/reverseRegistrar/L2ReverseRegistrarWithMigration.sol
 
-export const REGISTRAR_ABI = new Interface([
-	`function owner() view returns (address)`,
-	`event NameForAddrChanged(address indexed addr, string name)`,
+export const REGISTRAR_ABI = parseAbi([
+	"function owner() view returns (address)",
+	"event NameForAddrChanged(address indexed addr, string name)",
 ]);
 
 const SLOT_NAMES = 0n;
 const SLOT_OWNER = 1n;
-const OWNER_PATH = toNibblePath(keccak256(toBytes(SLOT_OWNER, 32)));
-
-export function setOwner(node: MaybeNode, owner: Hex): MaybeNode {
-	return insertLeaf(node, OWNER_PATH, trimLeadingZeros(toBytes(owner)));
+export function setOwner(storage: SlotStorage, owner: Hex) {
+	storage.setStorage(toBytes(SLOT_OWNER, 32), toBytes(owner));
 }
 
 export function getPrimarySlot(addr: Hex): Uint8Array {
@@ -43,7 +36,7 @@ export const KNOWN_ADDRS = [
 ] as const;
 
 export type ChainInfo = {
-	id: bigint;
+	id: number;
 	name: string;
 	testnet?: boolean;
 	explorer: string;
@@ -60,12 +53,14 @@ export type ChainInfo = {
 
 export function determineProvider(info: ChainInfo, proto = "https") {
 	let key: string | undefined;
-	if (info.drpcSlug && (key = process.env.DRPC_KEY)) {
+	if ((key = process.env.RPC_URL)) {
+		return key; // explicit override (must support eth_getProof)
+	} else if (info.drpcSlug && (key = process.env.DRPC_KEY)) {
 		return `${proto}://lb.drpc.live/${info.drpcSlug}/${key}`;
 	} else if (info.alchemySlug && (key = process.env.ALCHEMY_KEY)) {
 		return `${proto}://${info.alchemySlug}.g.alchemy.com/v2/${key}`;
 	} else {
-		throw new Error(`missing .env`);
+		throw new Error(`missing .env: set RPC_URL, DRPC_KEY, or ALCHEMY_KEY`);
 	}
 }
 
@@ -74,7 +69,7 @@ export function determineChain(name = "op"): ChainInfo {
 		case "arb": {
 			return {
 				name: "arbitrum",
-				id: 42161n,
+				id: 42161,
 				//publicRPC: "https://arb1.arbitrum.io/rpc",
 				drpcSlug: "arbitrum",
 				alchemySlug: "arb-mainnet",
@@ -86,7 +81,7 @@ export function determineChain(name = "op"): ChainInfo {
 		case "op":
 			return {
 				name: "optimism",
-				id: 10n,
+				id: 10,
 				explorer: "https://optimistic.etherscan.io",
 				publicRPC: "https://mainnet.optimism.io",
 				drpcSlug: "optimism",
@@ -96,7 +91,7 @@ export function determineChain(name = "op"): ChainInfo {
 		case "base":
 			return {
 				name: "base",
-				id: 8453n,
+				id: 8453,
 				ownable: true,
 				explorer: "https://basescan.org",
 				publicRPC: "https://mainnet.base.org",
@@ -107,7 +102,7 @@ export function determineChain(name = "op"): ChainInfo {
 		case "linea":
 			return {
 				name: "linea",
-				id: 59144n,
+				id: 59144,
 				explorer: "https://lineascan.build",
 				publicRPC: "https://rpc.linea.build",
 				drpcSlug: "linea",
@@ -117,7 +112,7 @@ export function determineChain(name = "op"): ChainInfo {
 		case "scroll":
 			return {
 				name: "scroll",
-				id: 534352n,
+				id: 534352,
 				explorer: "https://scrollscan.com",
 				publicRPC: "https://rpc.scroll.io",
 				drpcSlug: "scroll",

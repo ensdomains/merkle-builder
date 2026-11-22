@@ -20,7 +20,7 @@ export function pluckLimbs(node: MaybeNode, depth: number): Limb[] {
 	const limbs: Limb[] = [];
 	if (node && depth > 0) pluck(node, []);
 	return limbs;
-	function pluck(node: Node, path: number[], ext = false): boolean | undefined {
+	function pluck(node: Node, path: number[], ext = false): boolean {
 		if (path.length >= depth) {
 			if (ext && "cache" in node) {
 				// since "cache" is in trunk, only copy children
@@ -40,6 +40,7 @@ export function pluckLimbs(node: MaybeNode, depth: number): Limb[] {
 		) {
 			node.child = { ...node.child, ...newBranch() }; // remove children
 		}
+		return false;
 	}
 }
 

@@ -6,8 +6,8 @@ import {
 	newLeaf,
 	type MaybeNode,
 } from "./trie.js";
-import { concat, toBytes } from "./utils.js";
-import { hex_from_bytes } from "@adraffy/keccak"; // skips "0x"
+import { concat, toHex } from "viem";
+import { toBytes } from "./utils.js";
 
 const MORE = {
 	[Symbol.for("nodejs.util.inspect.custom")]() {
@@ -21,15 +21,15 @@ export function toJSON(node: MaybeNode, depth = Infinity): any {
 	if (isBranch(node)) {
 		return Object.fromEntries(
 			node.children.flatMap((x, i) =>
-				x ? [[toNibbleChar(i), x && toJSON(x, depth - 1)]] : [],
+				x ? [[toNibbleChar(i), toJSON(x, depth - 1)]] : [],
 			),
 		);
 	} else if (isExtension(node)) {
 		return [nibbleStr(node.path), toJSON(node.child, depth - 1)];
 	} else if (node.path.length) {
-		return [nibbleStr(node.path), hex_from_bytes(node.data)];
+		return [nibbleStr(node.path), toHex(node.data).slice(2)];
 	} else {
-		return hex_from_bytes(node.data);
+		return toHex(node.data).slice(2);
 	}
 }
 
@@ -45,9 +45,9 @@ export function fromJSON(json: any): MaybeNode {
 				if (isBranch(child)) {
 					return { path, child };
 				} else if (isExtension(child)) {
-					return { path: concat(path, child.path), child: child.child };
+					return { path: concat([path, child.path]), child: child.child };
 				} else if (child) {
-					return newLeaf(concat(path, child.path), child.data);
+					return newLeaf(concat([path, child.path]), child.data);
 				}
 			} else if (json.constructor === Object) {
 				const b = newBranch();

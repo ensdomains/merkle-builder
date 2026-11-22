@@ -1,7 +1,8 @@
 import { inspect } from "bun";
 import { randomBytes, randomInt } from "node:crypto";
 import { insertLeaf, toNibblePath, type MaybeNode } from "../src/trie.js";
-import { keccak256, toHex, trimLeadingZeros } from "../src/utils.js";
+import { keccak256, toHex } from "viem";
+import { trimLeadingZeros } from "../src/utils.js";
 
 export function dump(x: unknown) {
 	console.log(inspect(x, { depth: Infinity, colors: true }));
@@ -15,8 +16,9 @@ export function randomTrie(size = 1 + randomInt(100)) {
 	const dedup = new Map<string, TrieEntry>();
 	while (dedup.size < size) {
 		const k = randomBytes(32);
-		const v = trimLeadingZeros(randomBytes(randomInt(33)));
-		const p = toNibblePath(keccak256(k));
+		const v = trimLeadingZeros(randomBytes(1 + randomInt(32)));
+		if (!v.length) continue; // zero is not stored
+		const p = toNibblePath(keccak256(k, "bytes"));
 		dedup.set(toHex(k), [k, v, p]);
 	}
 	const storage = [...dedup.values()];

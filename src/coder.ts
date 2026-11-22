@@ -16,7 +16,7 @@ const TY_EMPTY_LEAF = 3;
 const TY_LEAF = 4;
 const TY_BRANCH_WITH_CACHE = 5;
 
-export const MAX_SIZE = (1 << 22) - 1; // 4194304
+export const MAX_SIZE = (1 << 22) - 1; // 4194303
 
 export class Coder {
 	static getByteCount(node: MaybeNode) {

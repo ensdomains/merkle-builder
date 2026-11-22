@@ -7,8 +7,9 @@ import {
 	insertLeaf,
 	toNibblePath,
 } from "../src/trie.js";
-import { keccak256, toBigInt, toBytes, toHex } from "../src/utils.js";
-import { insertBytes, type InsertMode } from "../src/kv.js";
+import { keccak256, toHex } from "viem";
+import { toBigInt, toBytes } from "../src/utils.js";
+import { insertBytes } from "../src/kv.js";
 import { randomBytes, randomInt, randomTrie, type TrieEntry } from "./utils.js";
 import { ethGetProof } from "./rpc.js";
 
@@ -17,8 +18,6 @@ describe("storage", async () => {
 	afterAll(F.shutdown);
 
 	const FUZZ = 20; // samples
-
-	const mode: InsertMode = "zero"; // forge zeros instead of deletes
 
 	test("empty", async () => {
 		const C = await F.deploy(`contract X {}`);
@@ -54,8 +53,8 @@ describe("storage", async () => {
 		const { storageHash } = await ethGetProof(F.provider, C.target);
 		const key = toBytes(0, 32);
 		let node = undefined;
-		node = insertLeaf(node, toNibblePath(keccak256(key)), toBytes(header));
-		node = insertBytes(node, key, v, mode);
+		node = insertLeaf(node, toNibblePath(keccak256(key, "bytes")), toBytes(header));
+		node = insertBytes(node, key, v);
 		expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
 	});
 
@@ -73,8 +72,8 @@ describe("storage", async () => {
 		const { storageHash } = await ethGetProof(F.provider, C.target);
 		const key = toBytes(0, 32);
 		let node = undefined;
-		node = insertBytes(node, key, v1, mode);
-		node = insertBytes(node, key, v2, mode);
+		node = insertBytes(node, key, v1);
+		node = insertBytes(node, key, v2);
 		expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
 	});
 
@@ -140,7 +139,7 @@ describe("storage", async () => {
 				);
 				const { storageHash } = await ethGetProof(F.provider, C.target);
 				const node = kv.reduce<MaybeNode>(
-					(a, [k, v]) => insertBytes(a, k, v, mode),
+					(a, [k, v]) => insertBytes(a, k, v),
 					undefined,
 				);
 				expect(toHex(getRootHash(node))).toStrictEqual(storageHash);

@@ -1,87 +1,29 @@
-import {
-	deleteNode,
-	EMPTY_BYTES,
-	findLeaf,
-	insertLeaf,
-	toNibblePath,
-	type MaybeNode,
-} from "./trie.js";
-import { toBigInt, toBytes, keccak256, trimLeadingZeros } from "./utils.js";
+import { EthStorage, type EthStorageOptions } from "./eth.js";
+import type { SetBytesOptions } from "./storage.js";
+import type { MaybeNode } from "./trie.js";
 
-export type InsertMode =
-	| "zero" // overwrite prior slots with 0
-	| "delete" // remove prior slots from trie
-	| "ignore"; // do nothing
+// functional wrappers around EthStorage
 
+// set the storage word at slot
+export function insertWord(
+	node: MaybeNode,
+	slot: Uint8Array,
+	value: Uint8Array,
+	options?: EthStorageOptions
+): MaybeNode {
+	const s = new EthStorage(node, options);
+	s.setStorage(slot, value);
+	return s.node;
+}
+
+// write value using the solidity "bytes" / "string" storage layout
 export function insertBytes(
 	node: MaybeNode,
 	slot: Uint8Array,
 	value: Uint8Array,
-	mode: InsertMode = "delete"
-) {
-	if (slot.length !== 32) throw new Error(`expected bytes32 slot`);
-	const key = keccak256(slot);
-	const path = toNibblePath(key);
-	let oldSize = 0;
-	if (mode !== "ignore") {
-		const prior = findLeaf(node, path)?.data;
-		if (prior?.length && prior[prior.length - 1] & 1) {
-			// small bytes can be ignored since the header is replaced
-			oldSize = Number(toBigInt(prior) >> 1n);
-			// if this is too large, likely theres an encoding error
-			// evm will run out of gas trying to clear it
-		}
-	}
-	let pos = 0;
-	if (value.length < 32) {
-		if (!value.length && mode === "delete") {
-			node = deleteNode(node, path);
-		} else {
-			const word = bytes32(value);
-			word[31] = value.length << 1;
-			node = insertLeaf(node, path, trimLeadingZeros(word));
-		}
-	} else {
-		node = insertLeaf(node, path, toBytes((BigInt(value.length) << 1n) | 1n));
-		for (; pos < value.length; increment(key)) {
-			const end = pos + 32;
-			node = insertLeaf(
-				node,
-				toNibblePath(keccak256(key)),
-				trimLeadingZeros(
-					end > value.length
-						? bytes32(value.subarray(pos))
-						: value.subarray(pos, end)
-				)
-			);
-			pos = end;
-		}
-	}
-	if (mode === "delete") {
-		for (; pos < oldSize; increment(key), pos += 32) {
-			node = deleteNode(node, toNibblePath(keccak256(key)));
-		}
-	} else if (mode === "zero") {
-		for (; pos < oldSize; increment(key), pos += 32) {
-			node = insertLeaf(node, toNibblePath(keccak256(key)), EMPTY_BYTES);
-		}
-	}
-	return node;
-}
-
-function increment(v: Uint8Array, max = 255) {
-	let i = v.length;
-	while (i && v[i - 1] === max) --i;
-	if (i) {
-		++v[i - 1];
-		v.fill(0, i);
-	} else {
-		v.fill(0);
-	}
-}
-
-function bytes32(v: Uint8Array) {
-	const word = new Uint8Array(32);
-	word.set(v);
-	return word;
+	options?: SetBytesOptions & EthStorageOptions
+): MaybeNode {
+	const s = new EthStorage(node, options);
+	s.setBytes(slot, value, options);
+	return s.node;
 }
