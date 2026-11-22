@@ -64,11 +64,11 @@ linea.getProof(slot); // linea_getProof().storageProofs[i]
 
 * Replicate `eth_getProof` for [`L2ReverseRegistrar`](https://github.com/ensdomains/ens-contracts/blob/staging/contracts/reverseRegistrar/L2ReverseRegistrar.sol) (requires [`.env`](./.env.sample) for provider, or `RPC_URL=<rpc with eth_getProof>`)
     * `bun run demo -c <chain>`
-        * ✅️ [`op`](https://optimistic.etherscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `125` names as of `2026-05-31`
-        * ✅️ [`base`](https://basescan.org/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `1,846,927` names as of `2026-05-31`
-        * ✅️ [`arb`](https://arbiscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `190` names as of `2026-05-31`
-        * ✅️ [`linea`](https://lineascan.build/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `95` names as of `2026-05-31`
-        * ✅️ [`scroll`](https://scrollscan.com/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `57` names as of `2026-05-31`
+        * ✅️ [`op`](https://optimistic.etherscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `169` names as of `2026-11-22`
+        * ✅️ [`base`](https://basescan.org/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `1,899,502` names as of `2026-01-28`
+        * ✅️ [`arb`](https://arbiscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `272` names as of `2026-11-22`
+        * ✅️ [`linea`](https://lineascan.build/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `111` names as of `2026-11-22`
+        * ✅️ [`scroll`](https://scrollscan.com/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `67` names as of `2026-11-22`
 * Update the name counts and dates above from `scripts/data/*.sqlite`
     * `bun run readme`
 * Replay the same events into `LineaStorage` and match `linea_getProof` (run `bun run demo -c linea` first to sync)
