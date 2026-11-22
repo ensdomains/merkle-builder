@@ -90,9 +90,19 @@ const limbs2 = Array.from({ length: coder.readSize() }, () => [
 	coder.readNode(),
 ]);
 console.timeEnd("read");
+// hashes are not serialized (derived from cache), so compare re-encoded bytes
+const encoded = (x: MaybeNode) => {
+	const c = new Coder();
+	c.writeNode(x);
+	return c.bytes;
+};
 console.log("Coder:", {
-	sameTrunk: deepEquals(trunk, trunk2),
-	sameLimbs: deepEquals(limbs, limbs2),
+	sameTrunk: deepEquals(encoded(trunk), encoded(trunk2)),
+	sameLimbs: limbs.every(
+		([path, limb], i) =>
+			deepEquals(path, limbs2[i][0]) &&
+			deepEquals(encoded(limb), encoded(limbs2[i][1] as MaybeNode)),
+	),
 });
 
 // join

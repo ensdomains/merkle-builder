@@ -175,15 +175,16 @@ describe("surgery", () => {
 		const trunk = copyNode(a);
 		const limbs = pluckLimbs(trunk, depth);
 
-		// "cache" only in trunk
+		// "cache" and "hash" only in trunk
 		expect(Object.keys(trunk), "keys:trunk").toStrictEqual([
 			"children",
 			"cache",
+			"hash",
 		]);
 		expect(
 			Object.keys((trunk as any)?.children[1]?.child),
 			"keys:trunk1",
-		).toStrictEqual(["children", "cache"]);
+		).toStrictEqual(["children", "cache"]); // < 32 bytes: inlined, never hashed
 		expect(Object.keys(limbs[0][1]), "keys:limb1").toStrictEqual(["children"]);
 		expect(getRootHash(trunk), "hash").toStrictEqual(rootHash);
 

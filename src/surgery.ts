@@ -14,7 +14,7 @@ type Limb = [path: Uint8Array, node: Node];
 // limbs are references (except extended branches)
 // leaves within depth are never plucked
 // extensions within depth are traversed to their child
-// extended branches keep "cache" in the trunk (removed from limb)
+// extended branches keep "cache" and "hash" in the trunk (removed from limb)
 // every limb path.length == depth
 export function pluckLimbs(node: MaybeNode, depth: number): Limb[] {
 	const limbs: Limb[] = [];
@@ -23,7 +23,7 @@ export function pluckLimbs(node: MaybeNode, depth: number): Limb[] {
 	function pluck(node: Node, path: number[], ext = false): boolean {
 		if (path.length >= depth) {
 			if (ext && "cache" in node) {
-				// since "cache" is in trunk, only copy children
+				// since "cache" and "hash" are in trunk, only copy children
 				node = { children: node.children };
 			}
 			limbs.push([new Uint8Array(path.slice(0, depth)), node]);

@@ -2,7 +2,11 @@ import { concat, keccak256, toHex } from "viem";
 
 export type LeafNode = { path: Uint8Array; data: Uint8Array };
 export type ExtensionNode = { path: Uint8Array; child: BranchNode };
-export type BranchNode = { children: MaybeNode[]; cache?: Uint8Array };
+export type BranchNode = {
+	children: MaybeNode[];
+	cache?: Uint8Array; // encodeNode(), computed lazily
+	hash?: Uint8Array; // keccak256(cache), computed lazily
+};
 
 export type Node = LeafNode | ExtensionNode | BranchNode;
 export type MaybeNode = Node | undefined;
@@ -102,6 +106,7 @@ export function getProof(node: MaybeNode, path: Uint8Array): Uint8Array[] {
 	return ret;
 }
 
+// returns the same node (by reference) when nothing changed
 export function insertLeaf(
 	node: BranchNode,
 	path: Uint8Array,
@@ -122,17 +127,18 @@ export function insertLeaf(
 	} else if (isBranch(node)) {
 		if (!path.length) throw new Error("invalid path: ends at branch");
 		const i = path[0];
+		const prev = node.children[i];
+		const child = insertLeaf(prev, path.subarray(1), data);
+		if (child === prev) return node; // unchanged
 		const children = node.children.slice();
-		children[i] = insertLeaf(children[i], path.subarray(1), data);
+		children[i] = child;
 		return { children };
 	} else if (isExtension(node)) {
 		const other = node.path;
 		const i = common(other, path);
 		if (i === other.length) {
-			return {
-				path: other,
-				child: insertLeaf(node.child, path.subarray(i), data),
-			};
+			const child = insertLeaf(node.child, path.subarray(i), data);
+			return child === node.child ? node : { path: other, child };
 		}
 		if (i === path.length) throw new Error("invalid path: ends in extension");
 		const b = newBranch();
@@ -146,7 +152,7 @@ export function insertLeaf(
 		const other = node.path;
 		const i = common(other, path);
 		if (i === other.length && i === path.length) {
-			return newLeaf(path, data);
+			return equals(node.data, data) ? node : newLeaf(path, data);
 		} else if (i === other.length || i === path.length) {
 			throw new Error("invalid path: length mismatch");
 		}
@@ -271,12 +277,19 @@ export function encodeNode(node: MaybeNode): Uint8Array {
 function encodeNodeRef(node: MaybeNode) {
 	if (!node) return RLP_NULL;
 	const v = encodeNode(node);
-	return encodeRlpBytes(v.length < 32 ? v : keccak256(v, "bytes"));
+	return encodeRlpBytes(v.length < 32 ? v : hashNode(node, v));
+}
+
+// keccak256(encodeNode(node)), cached on branches
+function hashNode(node: Node, v = encodeNode(node)): Uint8Array {
+	return isBranch(node)
+		? (node.hash ??= keccak256(v, "bytes"))
+		: keccak256(v, "bytes");
 }
 
 export function clearCache(node: MaybeNode) {
 	if (isBranch(node)) {
-		node.cache = undefined;
+		node.cache = node.hash = undefined;
 		node.children.forEach(clearCache);
 	} else if (isExtension(node)) {
 		clearCache(node.child);
@@ -285,7 +298,7 @@ export function clearCache(node: MaybeNode) {
 
 // unlike child references, the root is always hashed (even if < 32 bytes)
 export function getRootHash(node: MaybeNode): Uint8Array {
-	return node ? keccak256(encodeNode(node), "bytes") : HASH_NULL;
+	return node ? hashNode(node) : HASH_NULL;
 }
 
 export function toNibblePath(v: Uint8Array): Uint8Array {
