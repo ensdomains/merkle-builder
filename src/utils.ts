@@ -1,8 +1,9 @@
-import { bytesToHex, concat, hexToBytes, keccak256 } from "viem";
+import keccak256 from "@adraffy/keccak/256";
+import { bytesToHex, concat, hexToBytes } from "viem";
 
 export function followSlot(slot: bigint, key: Uint8Array): Uint8Array {
 	// https://docs.soliditylang.org/en/latest/internals/layout_in_storage.html#mappings-and-dynamic-arrays
-	return keccak256(concat([key, toBytes(slot, 32)]), "bytes");
+	return keccak256(concat([key, toBytes(slot, 32)]));
 }
 
 // always makes a copy

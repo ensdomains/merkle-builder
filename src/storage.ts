@@ -1,5 +1,5 @@
 import { EMPTY_BYTES } from "./trie.js";
-import { keccak256 } from "viem";
+import keccak256 from "@adraffy/keccak/256";
 import { toBigInt, toBytes, toWord } from "./utils.js";
 
 // word-level view of a contract's storage + solidity layout helpers
@@ -15,7 +15,7 @@ export abstract class SlotStorage {
 	setBytes(slot: Uint8Array, value: Uint8Array) {
 		assertSlot(slot);
 		const oldSize = getLongSize(this.getStorage(slot));
-		const key = keccak256(slot, "bytes"); // first data slot (mutated by increment)
+		const key = keccak256(slot); // first data slot (mutated by increment)
 		let pos = 0;
 		if (value.length < 32) {
 			const word = new Uint8Array(32);
@@ -46,7 +46,7 @@ export abstract class SlotStorage {
 			const word = toWord(header);
 			return word.slice(0, word[31] >> 1);
 		}
-		const key = keccak256(slot, "bytes");
+		const key = keccak256(slot);
 		const v = new Uint8Array(size);
 		for (let pos = 0; pos < size; pos += 32, increment(key)) {
 			v.set(toWord(this.getStorage(key)).subarray(0, size - pos), pos);

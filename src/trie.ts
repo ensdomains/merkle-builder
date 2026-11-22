@@ -1,4 +1,5 @@
-import { concat, keccak256, toHex } from "viem";
+import keccak256 from "@adraffy/keccak/256";
+import { concat, toHex } from "viem";
 
 export type LeafNode = { path: Uint8Array; data: Uint8Array };
 export type ExtensionNode = { path: Uint8Array; child: BranchNode };
@@ -14,7 +15,7 @@ export type MaybeNode = Node | undefined;
 export const EMPTY_BYTES = new Uint8Array(0);
 
 const RLP_NULL = encodeRlpBytes(EMPTY_BYTES); // 0x80
-const HASH_NULL = keccak256(RLP_NULL, "bytes"); // 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
+const HASH_NULL = keccak256(RLP_NULL); // 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
 
 export function isBranch(node: MaybeNode): node is BranchNode {
 	return !!node && ("children" satisfies keyof BranchNode) in node;
@@ -283,8 +284,8 @@ function encodeNodeRef(node: MaybeNode) {
 // keccak256(encodeNode(node)), cached on branches
 function hashNode(node: Node, v = encodeNode(node)): Uint8Array {
 	return isBranch(node)
-		? (node.hash ??= keccak256(v, "bytes"))
-		: keccak256(v, "bytes");
+		? (node.hash ??= keccak256(v))
+		: keccak256(v);
 }
 
 export function clearCache(node: MaybeNode) {

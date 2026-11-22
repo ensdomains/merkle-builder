@@ -49,5 +49,8 @@
 		"Trie",
 		"eth_getProof",
 		"eth_getStorageAt"
-	]
+	],
+	"dependencies": {
+		"@adraffy/keccak": "^1.3.4"
+	}
 }

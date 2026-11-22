@@ -9,7 +9,8 @@ import {
 	type MaybeNode,
 } from "./trie.js";
 import { SlotStorage } from "./storage.js";
-import { type Hex, keccak256, toHex } from "viem";
+import keccak256 from "@adraffy/keccak/256";
+import { type Hex, toHex } from "viem";
 import { toBigInt, trimLeadingZeros } from "./utils.js";
 
 // storageProof[] entry of eth_getProof
@@ -26,7 +27,7 @@ export class EthStorage extends SlotStorage {
 		super();
 	}
 	static path(slot: Uint8Array): Uint8Array {
-		return toNibblePath(keccak256(slot, "bytes"));
+		return toNibblePath(keccak256(slot));
 	}
 	clone(): EthStorage {
 		return new EthStorage(this.node);
