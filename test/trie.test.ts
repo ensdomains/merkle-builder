@@ -75,8 +75,7 @@ describe("trie", () => {
 			//    0*
 			//   / \
 			// [0] [1]
-			let a = undefined;
-			a = insertLeaf(a, Uint8Array.of(0, 0), Uint8Array.of(1));
+			const a = insertLeaf(undefined, Uint8Array.of(0, 0), Uint8Array.of(1));
 			expect(isLeaf(a)).toBeTrue();
 			expect(deleteNode(a, Uint8Array.of(0))).toBeUndefined();
 		});
@@ -87,12 +86,11 @@ describe("trie", () => {
 			//    0*   1
 			//   / \    \
 			// [0] [1]   [1]
-			let a = undefined;
+			let a: MaybeNode;
 			a = insertLeaf(a, Uint8Array.of(0, 0), Uint8Array.of(1));
 			a = insertLeaf(a, Uint8Array.of(0, 1), Uint8Array.of(1));
 			a = insertLeaf(a, Uint8Array.of(1, 1), Uint8Array.of(1));
-			let b = undefined;
-			b = insertLeaf(b, Uint8Array.of(1, 1), Uint8Array.of(1));
+			const b = insertLeaf(undefined, Uint8Array.of(1, 1), Uint8Array.of(1));
 			expect(isBranch(a)).toBeTrue();
 			expect(deleteNode(a, Uint8Array.of(0))).toStrictEqual(b);
 			expect(isLeaf(b));
@@ -104,11 +102,11 @@ describe("trie", () => {
 			//    0*   1        [0]  [1]
 			//   /    / \
 			// [0]  [0] [1]
-			let a = undefined;
+			let a: MaybeNode;
 			a = insertLeaf(a, Uint8Array.of(0, 0), Uint8Array.of(1));
 			a = insertLeaf(a, Uint8Array.of(1, 0), Uint8Array.of(1));
 			a = insertLeaf(a, Uint8Array.of(1, 1), Uint8Array.of(1));
-			let b = undefined;
+			let b: MaybeNode;
 			b = insertLeaf(b, Uint8Array.of(1, 0), Uint8Array.of(1));
 			b = insertLeaf(b, Uint8Array.of(1, 1), Uint8Array.of(1));
 			expect(isBranch(a)).toBeTrue();
@@ -122,7 +120,7 @@ describe("trie", () => {
 			//   (0)*
 			//   / \
 			// [0] [1]
-			let a = undefined;
+			let a: MaybeNode;
 			a = insertLeaf(a, Uint8Array.of(0, 0), Uint8Array.of(1));
 			a = insertLeaf(a, Uint8Array.of(0, 1), Uint8Array.of(1));
 			expect(isExtension(a)).toBeTrue();
@@ -135,11 +133,10 @@ describe("trie", () => {
 			//   (0)
 			//   /  \
 			// [0]* [1]
-			let a = undefined;
+			let a: MaybeNode;
 			a = insertLeaf(a, Uint8Array.of(0, 0), Uint8Array.of(1));
 			a = insertLeaf(a, Uint8Array.of(0, 1), Uint8Array.of(1));
-			let b = undefined;
-			b = insertLeaf(b, Uint8Array.of(0, 1), Uint8Array.of(1));
+			const b = insertLeaf(undefined, Uint8Array.of(0, 1), Uint8Array.of(1));
 			expect(isExtension(a)).toBeTrue();
 			expect(deleteNode(a, Uint8Array.of(0, 0))).toStrictEqual(b);
 			expect(isLeaf(b)).toBeTrue();

@@ -49,7 +49,7 @@ export function pluckLimbs(node: MaybeNode, depth: number): Limb[] {
 export function graftLimb(trunk: MaybeNode, [path, limb]: Limb): Node {
 	if (!trunk || !path.length) throw new Error("invalid graft");
 	const part: number[] = [];
-	let parent: MaybeNode = undefined;
+	let parent: MaybeNode;
 	let cursor: MaybeNode = trunk;
 	while (part.length < path.length) {
 		if (isBranch(cursor)) {

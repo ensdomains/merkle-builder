@@ -52,7 +52,7 @@ describe("storage", async () => {
 		await F.confirm(C.set(v));
 		const { storageHash } = await ethGetProof(F.provider, C.target);
 		const key = toBytes(0, 32);
-		let node = undefined;
+		let node: MaybeNode;
 		node = insertLeaf(node, toNibblePath(keccak256(key, "bytes")), toBytes(header));
 		node = insertBytes(node, key, v);
 		expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
@@ -71,7 +71,7 @@ describe("storage", async () => {
 		await F.confirm(C.set(v2));
 		const { storageHash } = await ethGetProof(F.provider, C.target);
 		const key = toBytes(0, 32);
-		let node = undefined;
+		let node: MaybeNode;
 		node = insertBytes(node, key, v1);
 		node = insertBytes(node, key, v2);
 		expect(toHex(getRootHash(node))).toStrictEqual(storageHash);

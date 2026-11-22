@@ -17,7 +17,7 @@ describe("registrar", async () => {
 			args: [1n],
 		});
 
-		let node: MaybeNode = undefined;
+		let node: MaybeNode ;
 
 		C.on("NameForAddrChanged", (addr: string, name: string) => {
 			node = insertBytes(

@@ -27,7 +27,7 @@ const args = parseArgs({
 const chainInfo = determineChain(args.values.chain);
 console.log(`Chain: ${chainInfo.name}`);
 
-const depth = parseInt(args.values.depth);
+const depth = parseInt(args.values.depth, 10);
 console.log(`Depth: ${depth}`);
 
 const db = new Database(`${import.meta.dir}/${chainInfo.name}.sqlite`);

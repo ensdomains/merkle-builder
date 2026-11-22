@@ -61,7 +61,8 @@ const updateState = db.prepare<unknown, [string, string]>(
 const storage = new EthStorage();
 let block0 = chainInfo.createdAtBlock;
 
-if (1) {
+// restore
+{
 	const state = Object.fromEntries(
 		db
 			.query<{ key: string; value: string }, []>("SELECT * FROM state")
@@ -69,7 +70,7 @@ if (1) {
 			.map((x) => [x.key, x.value]),
 	);
 	if (state.block0) {
-		block0 = Math.max(block0, parseInt(state.block0));
+		block0 = Math.max(block0, parseInt(state.block0, 10));
 	}
 	console.log(`Blocks: [${chainInfo.createdAtBlock}, ${block0})`);
 	printNamesCount();
@@ -255,8 +256,8 @@ async function getLogs(client: PublicClient, block0: number, block1: number) {
 				err.details?.match(
 					/query exceeds max results (\d+), retry with the range (\d+)-(\d+)/,
 				);
-			if (match && parseInt(match[2]) === block0) {
-				block1 = parseInt(match[3]);
+			if (match && parseInt(match[2], 10) === block0) {
+				block1 = parseInt(match[3], 10);
 				continue;
 			} else if (count > 1) {
 				const less = Math.ceil(count / 5);

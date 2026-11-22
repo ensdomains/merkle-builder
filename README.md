@@ -51,6 +51,7 @@ linea.getProof(slot); // linea_getProof().storageProofs[i]
 
 * `bun test`
 * `bun run check` &mdash; type check (`tsc`)
+* `bun run lint` &mdash; [Biome](https://biomejs.dev) lint + import order (`bun run lint:fix` to apply fixes)
 * `bun run fuzz` &mdash; run [`storage.test.ts`](./test/storage.test.ts) until it fails
 
 ### Build

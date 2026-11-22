@@ -15,7 +15,7 @@ const MORE = {
 	},
 };
 
-export function toJSON(node: MaybeNode, depth = Infinity): any {
+export function toJSON(node: MaybeNode, depth = Infinity): unknown {
 	if (!node) return null;
 	if (depth < 0) return MORE;
 	if (isBranch(node)) {
@@ -33,7 +33,7 @@ export function toJSON(node: MaybeNode, depth = Infinity): any {
 	}
 }
 
-export function fromJSON(json: any): MaybeNode {
+export function fromJSON(json: unknown): MaybeNode {
 	switch (typeof json) {
 		case "string":
 			return newLeaf(EMPTY_BYTES, toBytes(json));

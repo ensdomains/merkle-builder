@@ -20,6 +20,8 @@
 	"scripts": {
 		"build": "rm -rf dist && tsc -p tsconfig.build.json",
 		"check": "tsc",
+		"lint": "biome check",
+		"lint:fix": "biome check --write",
 		"test": "bun test",
 		"fuzz": "while bun test test/storage.test.ts; do :; done",
 		"prepublishOnly": "bun run check && bun test && bun run build"
@@ -29,6 +31,7 @@
 	},
 	"devDependencies": {
 		"@adraffy/blocksmith": "^0.1.60",
+		"@biomejs/biome": "^2.6.8",
 		"@types/bun": "^1.4.5",
 		"typescript": "^7.0.2",
 		"viem": "^2.58.4"
