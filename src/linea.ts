@@ -2,7 +2,7 @@ import { poseidon2, poseidon2Pad } from "./poseidon2.js";
 import { SlotStorage } from "./storage.js";
 import { EMPTY_BYTES } from "./trie.js";
 import { concat, type Hex, toHex } from "viem";
-import { toBytes, toWord, trimLeadingZeros } from "./utils.js";
+import { equalBytes, toBytes, toWord, trimLeadingZeros } from "./utils.js";
 
 // Linea storage trie of a single contract (Shomei "ZK trie", Poseidon2/KoalaBear era)
 //
@@ -331,12 +331,6 @@ export class LineaStorage extends SlotStorage {
 			rightLeafIndex,
 		};
 	}
-}
-
-function equalBytes(a: Uint8Array, b: Uint8Array) {
-	if (a.length !== b.length) return false;
-	for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
-	return true;
 }
 
 // verify a proof against a storage root (as SparseMerkleProof.verifyProof does)

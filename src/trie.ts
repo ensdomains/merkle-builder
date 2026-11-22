@@ -1,5 +1,6 @@
 import keccak256 from "@adraffy/keccak/256";
 import { concat, toHex } from "viem";
+import { equalBytes } from "./utils.js";
 
 export type LeafNode = { path: Uint8Array; data: Uint8Array };
 export type ExtensionNode = { path: Uint8Array; child: BranchNode };
@@ -44,9 +45,6 @@ function startsWith(path: Uint8Array, prefix: Uint8Array): boolean {
 	return true;
 }
 
-function equals(a: Uint8Array, b: Uint8Array): boolean {
-	return a.length === b.length && startsWith(a, b);
-}
 
 export function copyNode<T extends MaybeNode>(node: T, copyPath = true): T {
 	if (isLeaf(node)) {
@@ -82,7 +80,7 @@ export function findLeaf(
 			path = path.subarray(node.path.length);
 			node = node.child;
 		} else {
-			return equals(path, node.path) ? node : undefined;
+			return equalBytes(path, node.path) ? node : undefined;
 		}
 	}
 	return;
@@ -153,7 +151,7 @@ export function insertLeaf(
 		const other = node.path;
 		const i = common(other, path);
 		if (i === other.length && i === path.length) {
-			return equals(node.data, data) ? node : newLeaf(path, data);
+			return equalBytes(node.data, data) ? node : newLeaf(path, data);
 		} else if (i === other.length || i === path.length) {
 			throw new Error("invalid path: length mismatch");
 		}

@@ -6,6 +6,13 @@ export function followSlot(slot: bigint, key: Uint8Array): Uint8Array {
 	return keccak256(concat([key, toBytes(slot, 32)]));
 }
 
+// viem has no bytes equality helper
+export function equalBytes(a: Uint8Array, b: Uint8Array): boolean {
+	if (a.length !== b.length) return false;
+	for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+	return true;
+}
+
 // always makes a copy
 export function trimLeadingZeros(v: Uint8Array): Uint8Array {
 	let i = 0;
