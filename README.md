@@ -33,12 +33,9 @@ linea.getProof(slot); // linea_getProof().storageProofs[i]
 * Linea switched from MiMC to Poseidon2 on 2026-04-01 (Beta v5.2); the MiMC trie is not supported
 * Only `storageProofs` can be reproduced locally (`accountProof` depends on the global account trie)
 
-#### Roadmap
+#### Not supported
 
-* ZKSync
-    * ☐ `Blake2S`
-    * ☐ `ZKSyncSMT`
-    * ☐ [`zks_getProof`](https://docs.zksync.io/zksync-protocol/api/zks-rpc)
+* ZKsync &mdash; all accounts share one global Blake2s tree with no per-contract storage root, so a contract's storage can't be reproduced from its own events ([`zks_getProof`](https://docs.zksync.io/zksync-protocol/api/zks-rpc) proofs fold to the batch root, and leaf indices are global)
 
 ---
 
