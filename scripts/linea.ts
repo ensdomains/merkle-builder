@@ -1,5 +1,5 @@
 // replay L2ReverseRegistrar events into LineaStorage and compare with linea_getProof
-// run `bun scripts/demo.ts -c linea` first to sync names
+// run `bun run demo -c linea` first to sync names
 import { Database } from "bun:sqlite";
 import { createPublicClient, http, numberToHex, toHex } from "viem";
 import { LineaStorage, type LineaStorageProof } from "../src/linea.js";
@@ -65,7 +65,7 @@ const real = await client
 	.catch((err) => {
 		// shomei only keeps state for recent L1-finalized blocks
 		console.error(
-			`linea_getProof failed at ${blockNumber}: sync first (bun scripts/demo.ts -c linea)`,
+			`linea_getProof failed at ${blockNumber}: sync first (bun run demo -c linea)`,
 		);
 		throw err;
 	});
