@@ -1,5 +1,5 @@
 // replay L2ReverseRegistrar events into LineaStorage and compare with linea_getProof
-// run `bun demo/app.ts -c linea` first to sync names
+// run `bun scripts/demo.ts -c linea` first to sync names
 import { Database } from "bun:sqlite";
 import { createPublicClient, http, numberToHex, toHex } from "viem";
 import { LineaStorage, type LineaStorageProof } from "../src/linea.js";
@@ -49,19 +49,27 @@ console.log(`StorageRoot: ${storage.storageRoot}`);
 const client = createPublicClient({ transport: http(determineProvider(chainInfo)) });
 
 const slots = KNOWN_ADDRS.map(getPrimarySlot);
-const real = await client.request<{
+type LineaGetProof = {
 	Method: "linea_getProof";
 	Parameters: [string, string[], string];
 	ReturnType: {
 		accountProof: { proof: { value: string } };
 		storageProofs: LineaStorageProof[];
 	};
-}>({
-	method: "linea_getProof",
-	params: [registrarAddress, slots.map((x) => toHex(x)), numberToHex(blockNumber)],
-});
+};
+const real = await client
+	.request<LineaGetProof>({
+		method: "linea_getProof",
+		params: [registrarAddress, slots.map((x) => toHex(x)), numberToHex(blockNumber)],
+	})
+	.catch((err) => {
+		// shomei only keeps state for recent L1-finalized blocks
+		console.error(
+			`linea_getProof failed at ${blockNumber}: sync first (bun scripts/demo.ts -c linea)`,
+		);
+		throw err;
+	});
 
-// account value = nonce | balance | storageRoot | ...
 const realRoot = toHex(toBytes(real.accountProof.proof.value).subarray(64, 96));
 console.log(`StorageRoot Match: ${realRoot === storage.storageRoot}`);
 slots.forEach((slot, i) => {
