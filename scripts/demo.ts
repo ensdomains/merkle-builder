@@ -12,12 +12,11 @@ import {
 } from "viem";
 import { EthStorage } from "../src/eth.js";
 import { toBytes, toWord } from "../src/utils.js";
+import { determineChain, determineRPC } from "./chains.js";
 import {
-	determineChain,
-	determineProvider,
 	getDatabasePath,
 	getPrimarySlot,
-	getRegistrarAddress,
+	getRegistrar,
 	KNOWN_ADDRS,
 	REGISTRAR_ABI,
 	setOwner,
@@ -78,9 +77,10 @@ function fmtDuration(seconds: number) {
 }
 
 const chainInfo = determineChain(args.values.chain);
-const registrarAddress = getRegistrarAddress(chainInfo.testnet);
+const registrar = getRegistrar(chainInfo);
+const registrarAddress = registrar.address;
 const NAME_CHANGED = getAbiItem({ abi: REGISTRAR_ABI, name: "NameForAddrChanged" });
-const realRPC = determineProvider(chainInfo);
+const realRPC = determineRPC(chainInfo);
 
 info("Chain", bold(`${chainInfo.name.toUpperCase()} (${chainInfo.id})`));
 info("Contract", cyan(`${chainInfo.explorer}/address/${registrarAddress}`));
@@ -106,7 +106,7 @@ const updateState = db.prepare<unknown, [string, string]>(
 );
 
 const storage = new EthStorage();
-let block0 = chainInfo.createdAtBlock;
+let block0 = registrar.createdAtBlock;
 
 // restore
 {
@@ -119,7 +119,7 @@ let block0 = chainInfo.createdAtBlock;
 	if (state.block0) {
 		block0 = Math.max(block0, parseInt(state.block0, 10));
 	}
-	info("Blocks", `[${fmt(chainInfo.createdAtBlock)}, ${fmt(block0)})`);
+	info("Blocks", `[${fmt(registrar.createdAtBlock)}, ${fmt(block0)})`);
 	info("Names", fmt(namesCount()));
 	const t = performance.now();
 	for (const row of db
@@ -148,7 +148,7 @@ const realClient = createPublicClient({ transport: http(realRPC) });
 
 const blockNumber = BigInt(block0 - 1);
 
-if (chainInfo.ownable) {
+if (registrar.ownable) {
 	const owner = await realClient.readContract({
 		address: registrarAddress,
 		abi: REGISTRAR_ABI,

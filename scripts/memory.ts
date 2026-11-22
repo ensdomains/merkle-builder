@@ -14,12 +14,8 @@ import {
 	type MaybeNode,
 	toNibblePath,
 } from "../src/trie.js";
-import {
-	determineChain,
-	getDatabasePath,
-	getPrimarySlot,
-	KNOWN_ADDRS,
-} from "./ens-registrar.js";
+import { determineChain } from "./chains.js";
+import { getDatabasePath, getPrimarySlot, KNOWN_ADDRS } from "./ens-registrar.js";
 
 const args = parseArgs({
 	options: {

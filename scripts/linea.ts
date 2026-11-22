@@ -4,24 +4,24 @@ import { Database } from "bun:sqlite";
 import { createPublicClient, http, numberToHex, toHex } from "viem";
 import { LineaStorage, type LineaStorageProof } from "../src/linea.js";
 import { toBytes } from "../src/utils.js";
+import { determineChain, determineRPC } from "./chains.js";
 import {
-	determineChain,
-	determineProvider,
 	getDatabasePath,
 	getPrimarySlot,
-	getRegistrarAddress,
+	getRegistrar,
 	KNOWN_ADDRS,
 } from "./ens-registrar.js";
 
 const chainInfo = determineChain("linea");
-const registrarAddress = getRegistrarAddress(chainInfo.testnet);
+const registrar = getRegistrar(chainInfo);
+const registrarAddress = registrar.address;
 
 const db = new Database(getDatabasePath(chainInfo), {
 	readonly: true,
 });
 const block0 = Number(
 	db.query<{ value: string }, []>("SELECT value FROM state WHERE key = 'block0'").get()?.value ??
-		chainInfo.createdAtBlock,
+		registrar.createdAtBlock,
 );
 const blockNumber = block0 - 1; // last synced block
 
@@ -47,7 +47,7 @@ console.log(`Blocks: ${blocks} (through ${blockNumber})`);
 console.log(`Leaves: ${storage.size} (nextFreeIndex = ${storage.nextFreeIndex})`);
 console.log(`StorageRoot: ${storage.storageRoot}`);
 
-const client = createPublicClient({ transport: http(determineProvider(chainInfo)) });
+const client = createPublicClient({ transport: http(determineRPC(chainInfo)) });
 
 const slots = KNOWN_ADDRS.map(getPrimarySlot);
 type LineaGetProof = {
