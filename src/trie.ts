@@ -8,13 +8,8 @@ export type Node = LeafNode | ExtensionNode | BranchNode;
 export type MaybeNode = Node | undefined;
 
 export const EMPTY_BYTES = new Uint8Array(0);
-export const EMPTY_LEAF = Object.freeze({
-	path: EMPTY_BYTES,
-	data: EMPTY_BYTES,
-} satisfies LeafNode);
 
 const RLP_NULL = encodeRlpBytes(EMPTY_BYTES); // 0x80
-const RLP_EMPTY = encodeRlpList([encodeRlpList([])]); // 0xc1c0
 const HASH_NULL = keccak256(RLP_NULL, "bytes"); // 0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421
 
 export function isBranch(node: MaybeNode): node is BranchNode {
@@ -27,10 +22,6 @@ export function isExtension(node: MaybeNode): node is ExtensionNode {
 
 export function isLeaf(node: MaybeNode): node is LeafNode {
 	return !!node && ("data" satisfies keyof LeafNode) in node;
-}
-
-export function isEmptyLeaf(node: MaybeNode) {
-	return isLeaf(node) && !node.path.length && !node.data.length;
 }
 
 // return common prefix length
@@ -242,10 +233,10 @@ export function deleteNode(node: MaybeNode, path: Uint8Array): MaybeNode {
 	}
 }
 
+// data is a trimmed non-zero word (zero is represented by the absence of a leaf)
 export function newLeaf(path: Uint8Array, data: Uint8Array): LeafNode {
 	if (!data.length) {
-		data = EMPTY_BYTES;
-		if (!path.length) return EMPTY_LEAF;
+		throw new Error("empty leaf: use deleteNode");
 	} else if (!data[0]) {
 		throw new Error(`not trim: ${toHex(data)}`);
 	}
@@ -278,14 +269,9 @@ export function encodeNode(node: MaybeNode): Uint8Array {
 }
 
 function encodeNodeRef(node: MaybeNode) {
-	if (!node) {
-		return RLP_NULL;
-	} else if (isEmptyLeaf(node)) {
-		return RLP_EMPTY;
-	} else {
-		const v = encodeNode(node);
-		return encodeRlpBytes(v.length < 32 ? v : keccak256(v, "bytes"));
-	}
+	if (!node) return RLP_NULL;
+	const v = encodeNode(node);
+	return encodeRlpBytes(v.length < 32 ? v : keccak256(v, "bytes"));
 }
 
 export function clearCache(node: MaybeNode) {

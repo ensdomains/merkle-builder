@@ -10,6 +10,7 @@ import {
 	type MaybeNode,
 } from "../src/trie.js";
 import { insertBytes, insertWord } from "../src/kv.js";
+import { Coder } from "../src/coder.js";
 import { keccak256 } from "viem";
 import { toBytes } from "../src/utils.js";
 
@@ -82,5 +83,10 @@ describe("regressions", () => {
 		// clearStale: false leaves them
 		expect(findLeaf(insertBytes(node, slot, Uint8Array.of(1), { clearStale: false }), stale)?.data).toStrictEqual(long.subarray(0, 32));
 		expect(insertWord(undefined, slot, Uint8Array.of(0))).toBeUndefined();
+	});
+
+	test("empty leaves are rejected", () => {
+		expect(() => insertLeaf(undefined, p(1), p())).toThrow("empty leaf");
+		expect(() => new Coder(Uint8Array.of(3)).readNode()).toThrow("no longer supported");
 	});
 });
