@@ -6,11 +6,12 @@ import {
 	custom,
 	type GetProofReturnType,
 	getAbiItem,
+	hexToBytes,
 	http,
 	type PublicClient,
 	toHex,
 } from "viem";
-import { EthStorage } from "../src/eth.js";
+import { EthRowStorage } from "../src/rows.js";
 import { toBytes, toWord } from "../src/utils.js";
 import { determineChain, determineRPC } from "./chains.js";
 import {
@@ -26,6 +27,7 @@ const args = parseArgs({
 	options: {
 		chain: { type: "string", short: "c" },
 		noSync: { type: "boolean" },
+		rebuild: { type: "boolean" }, // rebuild the trie rows from the names table
 	},
 	strict: true,
 });
@@ -98,6 +100,12 @@ db.run(`CREATE TABLE IF NOT EXISTS names (
 	name BLOB
 )`);
 
+// storage trie as rows (see EthRowStorage): only the touched paths are read on each update
+db.run(`CREATE TABLE IF NOT EXISTS rows (
+	path TEXT PRIMARY KEY,
+	node BLOB NOT NULL
+) WITHOUT ROWID`);
+
 const insertName = db.prepare<unknown, [number, Uint8Array, Uint8Array]>(
 	"INSERT INTO names (block,addr,name) VALUES(?,?,?)",
 );
@@ -105,10 +113,23 @@ const updateState = db.prepare<unknown, [string, string]>(
 	"REPLACE INTO state (key,value) VALUES(?,?)",
 );
 
-const storage = new EthStorage();
+const selectRow = db.prepare<{ node: Uint8Array }, [string]>("SELECT node FROM rows WHERE path = ?");
+const upsertRow = db.prepare<unknown, [string, Uint8Array]>("REPLACE INTO rows (path,node) VALUES(?,?)");
+const deleteRow = db.prepare<unknown, [string]>("DELETE FROM rows WHERE path = ?");
+
+const storage = new EthRowStorage((path) => selectRow.get(path)?.node);
 let block0 = registrar.createdAtBlock;
 
-// restore
+// apply pending writes to the rows table (call inside a transaction)
+function commitRows() {
+	const { rows } = storage.commit();
+	for (const { path, node } of rows) {
+		if (node) upsertRow.run(path, hexToBytes(node));
+		else deleteRow.run(path);
+	}
+}
+
+// restore: the rows hold every name below block0 (state.rowsBlock = block0)
 {
 	const state = Object.fromEntries(
 		db
@@ -121,16 +142,11 @@ let block0 = registrar.createdAtBlock;
 	}
 	info("Blocks", `[${fmt(registrar.createdAtBlock)}, ${fmt(block0)})`);
 	info("Names", fmt(namesCount()));
-	const t = performance.now();
-	for (const row of db
-		.query<
-			{ addr: Uint8Array; name: Uint8Array },
-			number
-		>("SELECT * FROM names WHERE block < ? ORDER BY rowid")
-		.iterate(block0)) {
-		storage.setBytes(getPrimarySlot(toHex(row.addr)), row.name);
+	// state values come back numeric (STRING column affinity)
+	if (args.values.rebuild || Number(state.rowsBlock) !== block0) {
+		rebuildRows();
 	}
-	info("Rebuild", dim(`${fmt(performance.now() - t)}ms`));
+	info("Rows", fmt(rowsCount()));
 }
 
 process.once("SIGINT", () => {
@@ -157,6 +173,7 @@ if (registrar.ownable) {
 	});
 	info("Owner", owner);
 	setOwner(storage, owner);
+	atomically(commitRows);
 }
 
 {
@@ -216,10 +233,12 @@ matched(`eth_getProof(${slots.length} slots)`, extract(realProof) === extract(fa
 db.close();
 process.exit(0);
 
+// fixed key order: nodes differ in the order of storageProof fields
 function extract({ storageHash, storageProof }: GetProofReturnType) {
-	return JSON.stringify({ storageHash, storageProof }, (_, x) =>
-		typeof x === "bigint" ? toHex(x) : x,
-	);
+	return JSON.stringify({
+		storageHash,
+		storageProof: storageProof.map(({ key, value, proof }) => ({ key, value: toHex(value), proof })),
+	});
 }
 
 async function sync() {
@@ -252,7 +271,7 @@ async function sync() {
 				block0,
 				Math.min(head, block0 + (chainInfo.logStep ?? 10000) - 1),
 			);
-			db.transaction(() => {
+			atomically(() => {
 				logs.forEach((entry, i) => {
 					const { addr, name } = entry.args;
 					const nameBuf = Buffer.from(name);
@@ -265,9 +284,11 @@ async function sync() {
 						log(dim(`  … and ${fmt(logs.length - 5)} more`));
 					}
 				});
+				commitRows();
 				block0 = lastBlock + 1;
 				updateState.run("block0", String(block0));
-			})();
+				updateState.run("rowsBlock", String(block0));
+			});
 			added += logs.length;
 			total += logs.length;
 			// progress over this sync session
@@ -360,4 +381,50 @@ async function getLogs(client: PublicClient, block0: number, block1: number) {
 
 function namesCount(): number {
 	return db.query<{ n: number }, []>("SELECT count(*) AS n FROM names").get()?.n ?? 0;
+}
+
+function rowsCount(): number {
+	return db.query<{ n: number }, []>("SELECT count(*) AS n FROM rows").get()?.n ?? 0;
+}
+
+// run fn in a transaction: uncommitted trie writes are discarded if it throws
+function atomically(fn: () => void) {
+	try {
+		db.transaction(fn)();
+	} catch (err) {
+		storage.rollback();
+		throw err;
+	}
+}
+
+// replay the names table into the rows table (first run, or --rebuild)
+function rebuildRows() {
+	const t = performance.now();
+	const total =
+		db
+			.query<{ n: number }, [number]>("SELECT count(*) AS n FROM names WHERE block < ?")
+			.get(block0)?.n ?? 0;
+	const page = db.query<{ id: number; addr: Uint8Array; name: Uint8Array }, [number, number]>(
+		"SELECT rowid AS id, addr, name FROM names WHERE block < ? AND rowid > ? ORDER BY rowid LIMIT 10000",
+	);
+	atomically(() => {
+		db.run("DELETE FROM rows");
+		db.run("DELETE FROM state WHERE key = 'rowsBlock'");
+	});
+	let done = 0;
+	for (let last = 0; ; ) {
+		const names = page.all(block0, last);
+		if (!names.length) break;
+		atomically(() => {
+			for (const row of names) {
+				storage.setBytes(getPrimarySlot(toHex(row.addr)), row.name);
+			}
+			commitRows();
+		});
+		last = names[names.length - 1].id;
+		done += names.length;
+		progress(`${bold("Rebuilding rows")} ${fmt(done)} / ${fmt(total)} names`);
+	}
+	updateState.run("rowsBlock", String(block0)); // the rows are complete
+	log(`${green("Rebuilt")} ${fmt(done)} names into rows ${dim(`in ${fmtDuration((performance.now() - t) / 1000)}`)}`);
 }
