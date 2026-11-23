@@ -9,7 +9,8 @@
 	* Compute efficient (branch nodes hash once)
 	* Multiple storage encodings (object, [bytes](./src/coder.ts), [JSON](./src/json.ts)) and [surgery](./src/surgery.ts) (trunk + limbs)
 * [`LineaStorage`](./src/linea.ts) &mdash; Linea sparse Merkle trie ([Poseidon2](./src/poseidon2.ts) over KoalaBear), matches `linea_getProof`
-* Both extend [`SlotStorage`](./src/storage.ts) (`getStorage` / `setStorage`), which provides the Solidity layout (`setBytes` / `getBytes`)
+* [`RowStorage`](./src/rows.ts) &mdash; the same Ethereum trie kept as rows in a database: reads only the nodes along touched paths and writes back only the nodes that changed
+* All extend [`SlotStorage`](./src/storage.ts) (`getStorage` / `setStorage`), which provides the Solidity layout (`setBytes` / `getBytes`)
 
 ```ts
 import { EthStorage, LineaStorage, followSlot } from "@ensdomains/merkle-builder";
@@ -32,6 +33,45 @@ linea.getProof(slot); // linea_getProof().storageProofs[i]
 * `LineaStorage.restore(nextFreeIndex, entries)` / `entries()` persist and restore state (or bootstrap from `linea_getProof` leaf indices)
 * Linea switched from MiMC to Poseidon2 on 2026-04-01 (Beta v5.2); the MiMC trie is not supported
 * Only `storageProofs` can be reproduced locally (`accountProof` depends on the global account trie)
+
+#### Row storage
+
+A trie as rows, so memory doesn't grow with the trie (eg. a SQLite table keyed by `path`):
+
+* `path` &mdash; the node's absolute nibble path from the root, as lowercase hex (`""` is the root)
+* `node` &mdash; [`encodeNode(node)`](./src/trie.ts) (RLP), or `null` when the node at that path was removed
+* Every node has a row, including nodes < 32 bytes that are embedded in their parent's encoding (the same nodes as `getProof()`), so a slot's proof is the rows along its key path
+* The empty trie has no rows (storage hash is `keccak256(0x80)`)
+
+```ts
+import { RowStorage, getProofFromRows, trieRows } from "@ensdomains/merkle-builder";
+
+const rows = new Map<string, Uint8Array>(); // or SELECT node FROM rows WHERE path = ?
+const read = (path: string) => rows.get(path); // synchronous
+
+const storage = new RowStorage(read);
+storage.setBytes(followSlot(0n, addr32), name); // buffered: reads see pending writes
+const { rows: changed, storageHash } = storage.commit(); // only the rows that changed
+for (const { path, node } of changed) {
+	if (node) rows.set(path, hexToBytes(node));
+	else rows.delete(path);
+}
+
+getProofFromRows(read, slot); // { proof, value }: eth_getProof().storageProof[i] without a trie
+trieRows(eth.node); // every row of an in-memory trie (eg. to migrate an EthStorage)
+```
+
+* Nodes are read on demand and cached (along with the writes) until `commit()` or `rollback()`: persist the rows before the next read
+* `commit()` hashes only the changed nodes and returns new and updated rows, plus `null` for removed paths
+* `bun run bench:rows -s map|sqlite|eth` &mdash; replay ~1.9M synthetic names (the size of Base):
+
+| store | names/s | rows written/s | peak RSS |
+| --- | --: | --: | --: |
+| `eth` &mdash; `EthStorage` (in memory) | 16,749 | | 2,473 MB |
+| `map` &mdash; `RowStorage` + `Map` | 21,137 | 75,814 | 2,999 MB |
+| `sqlite` &mdash; `RowStorage` + `bun:sqlite` (WAL) | 14,592 | 52,337 | 344 MB (69 MB after GC) |
+
+<sub>10,000 names per commit, 2,665,120 rows, same storage hash; the `map` store holds every row in memory</sub>
 
 #### Not supported
 

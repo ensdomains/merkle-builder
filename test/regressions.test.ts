@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { keccak256 } from "viem";
+import { keccak256, toHex } from "viem";
 import { Coder } from "../src/coder.js";
 import { insertBytes, insertWord } from "../src/kv.js";
 import {
@@ -85,5 +85,15 @@ describe("regressions", () => {
 	test("empty leaves are rejected", () => {
 		expect(() => insertLeaf(undefined, p(1), p())).toThrow("empty leaf");
 		expect(() => new Coder(Uint8Array.of(3)).readNode()).toThrow("no longer supported");
+	});
+
+	test("encodeNode: children < 32 bytes are embedded as lists, not bytes", () => {
+		// branch { 0: leaf(01), 1: leaf(02) } at the end of the path
+		let a: MaybeNode;
+		a = insertLeaf(a, p(1, 2, 3, 0), p(1));
+		a = insertLeaf(a, p(1, 2, 3, 1), p(2));
+		const branch = isExtension(a) ? a.child : undefined;
+		// leaf = [0x20, 0x01] = c22001 (was wrapped as bytes: 83c22001)
+		expect(toHex(encodeNode(branch))).toBe(`0xd5c22001c22002${"80".repeat(15)}`);
 	});
 });

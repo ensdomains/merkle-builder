@@ -1,5 +1,6 @@
 import keccak256 from "@adraffy/keccak/256";
 import { concat, toHex } from "viem";
+import { encodePath, encodeRlpBytes, encodeRlpList } from "./rlp.js";
 import { equalBytes } from "./utils.js";
 
 export type LeafNode = { path: Uint8Array; data: Uint8Array };
@@ -273,10 +274,11 @@ export function encodeNode(node: MaybeNode): Uint8Array {
 	}
 }
 
+// a child < 32 bytes is embedded as is (rlp list), otherwise by hash (rlp bytes)
 function encodeNodeRef(node: MaybeNode) {
 	if (!node) return RLP_NULL;
 	const v = encodeNode(node);
-	return encodeRlpBytes(v.length < 32 ? v : hashNode(node, v));
+	return v.length < 32 ? v : encodeRlpBytes(hashNode(node, v));
 }
 
 // keccak256(encodeNode(node)), cached on branches
@@ -309,43 +311,4 @@ export function toNibblePath(v: Uint8Array): Uint8Array {
 		u[i++] = x & 15;
 	}
 	return u;
-}
-
-function encodePath(path: Uint8Array, leaf: boolean): Uint8Array {
-	const v = new Uint8Array(1 + (path.length >> 1));
-	if (leaf) v[0] = 32;
-	const odd = path.length & 1;
-	if (path.length & 1) v[0] |= 16 | path[0];
-	for (let i = odd, j = 1; i < path.length; i += 2, ++j) {
-		v[j] = (path[i] << 4) | path[i + 1];
-	}
-	return v;
-}
-
-function encodeRlpLength(start: number, length: number): Uint8Array {
-	const max = 55;
-	if (length <= max) return Uint8Array.of(start + length);
-	const v = new Uint8Array(8);
-	let i = v.length;
-	for (; length; length >>= 8, ++start) {
-		v[--i] = length;
-	}
-	v[--i] = start + max;
-	return v.subarray(i);
-}
-
-function encodeRlpList(m: Uint8Array[]): Uint8Array {
-	return concat([
-		encodeRlpLength(
-			0xc0,
-			m.reduce((a, x) => a + x.length, 0)
-		),
-		...m
-	]);
-}
-
-function encodeRlpBytes(v: Uint8Array): Uint8Array {
-	const max = 0x80;
-	if (v.length === 1 && v[0] < max) return v;
-	return concat([encodeRlpLength(max, v.length), v]);
 }

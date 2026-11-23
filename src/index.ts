@@ -5,6 +5,7 @@ export * from "./json.js";
 export * from "./kv.js";
 export * from "./linea.js";
 export * from "./poseidon2.js";
+export * from "./rows.js";
 export * from "./storage.js";
 export * from "./surgery.js";
 export * from "./trie.js";
