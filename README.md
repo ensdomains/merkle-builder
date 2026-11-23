@@ -100,7 +100,8 @@ trieRows(eth.node); // every row of an in-memory trie (eg. to migrate an EthStor
 ### Demo
 
 * Replicate `eth_getProof` for [`L2ReverseRegistrar`](https://github.com/ensdomains/ens-contracts/blob/staging/contracts/reverseRegistrar/L2ReverseRegistrar.sol) (requires [`.env`](./.env.sample) for provider, or `RPC_URL=<rpc with eth_getProof>`)
-    * `bun run demo -c <chain>`
+    * `bun run demo -c <chain>` &mdash; syncs events into `scripts/data/<chain>.sqlite` and keeps the trie there as rows (`EthRowStorage`), so a restart only applies new events
+    * `--rebuild` rebuilds the rows from the synced names (also done automatically on first run) &bull; `--noSync` skips syncing
         * ✅️ [`op`](https://optimistic.etherscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `169` names as of `2026-11-22`
         * ✅️ [`base`](https://basescan.org/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `1,899,502` names as of `2026-01-28`
         * ✅️ [`arb`](https://arbiscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `272` names as of `2026-11-22`

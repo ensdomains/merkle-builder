@@ -39,7 +39,7 @@ for (const [, , key] of readme.matchAll(LINE)) {
 	// timestamp of the last synced block (saved by scripts/demo.ts), otherwise ask a public rpc
 	const last = block0 - 1;
 	const timestamp =
-		state.timestampBlock === String(last)
+		Number(state.timestampBlock) === last // state values are numeric (STRING column affinity)
 			? Number(state.timestamp)
 			: await fetchTimestamp(info, last);
 	const date = timestamp ? new Date(timestamp * 1000).toISOString().slice(0, 10) : undefined;
