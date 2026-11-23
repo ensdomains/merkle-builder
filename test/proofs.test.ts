@@ -2,7 +2,6 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
 import { keccak256, toHex } from "viem";
 import { EthStorage } from "../src/eth.js";
-import { insertWord } from "../src/kv.js";
 import { getProof, toNibblePath } from "../src/trie.js";
 import { toBigInt, toBytes } from "../src/utils.js";
 import { ethGetProof } from "./rpc.js";
@@ -27,7 +26,9 @@ describe("proofs", async () => {
 		const slot = toBytes(0, 32);
 		const { storageProof } = await ethGetProof(F.provider, C.target, [slot]);
 		const path = toNibblePath(keccak256(slot, "bytes"));
-		const node = insertWord(undefined, slot, toBytes(0)); // zero => absent
+		const storage = new EthStorage();
+		storage.setStorage(slot, toBytes(0)); // zero => absent
+		const { node } = storage;
 		expect(node).toBeUndefined();
 		const proof = getProof(node, path).map((x) => toHex(x));
 		expect(proof).toStrictEqual(storageProof[0].proof);

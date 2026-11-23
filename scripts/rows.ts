@@ -1,4 +1,4 @@
-// benchmark: replay synthetic primary names into a row-backed trie (RowStorage) or EthStorage
+// benchmark: replay synthetic primary names into a row-backed trie (EthRowStorage) or EthStorage
 // usage: bun run bench:rows --store map|sqlite|eth [--names 1900000] [--batch 10000]
 import { Database } from "bun:sqlite";
 import { rmSync } from "node:fs";
@@ -8,7 +8,7 @@ import { parseArgs } from "node:util";
 import keccak256 from "@adraffy/keccak/256";
 import { toHex } from "viem";
 import { EthStorage } from "../src/eth.js";
-import { RowStorage, type TrieRow } from "../src/rows.js";
+import { EthRowStorage, type TrieRow } from "../src/rows.js";
 import { getPrimarySlot } from "./ens-registrar.js";
 
 const args = parseArgs({
@@ -47,7 +47,7 @@ function nextEvent(): [slot: Uint8Array, name: Uint8Array] {
 }
 
 type Backend = {
-	storage: EthStorage | RowStorage;
+	storage: EthStorage | EthRowStorage;
 	commit(): string; // storage hash
 	rowCount(): number;
 	close?(): void;
@@ -59,7 +59,7 @@ function rowBytes(node: string) {
 
 function mapBackend(): Backend {
 	const rows = new Map<string, Uint8Array>();
-	const storage = new RowStorage((path) => rows.get(path));
+	const storage = new EthRowStorage((path) => rows.get(path));
 	return {
 		storage,
 		commit() {
@@ -91,7 +91,7 @@ function sqliteBackend(): Backend {
 			else remove.run(path);
 		}
 	});
-	const storage = new RowStorage((path) => select.get(path)?.node);
+	const storage = new EthRowStorage((path) => select.get(path)?.node);
 	console.log(`Database: ${file}`);
 	return {
 		storage,

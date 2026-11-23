@@ -1,12 +1,11 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
 import { keccak256, toHex } from "viem";
-import { insertBytes } from "../src/kv.js";
+import { EthStorage } from "../src/eth.js";
 import {
 	deleteNode,
 	getRootHash,
 	insertLeaf,
-	type MaybeNode,
 	toNibblePath,
 } from "../src/trie.js";
 import { toBigInt, toBytes } from "../src/utils.js";
@@ -37,7 +36,7 @@ describe("storage", async () => {
 		).rejects.toThrow();
 	});
 
-	test("insertBytes: w/unset", async () => {
+	test("setBytes: w/unset", async () => {
 		const header = 2001;
 		const C = await F.deploy(`contract X {
 			bytes slot0;
@@ -52,13 +51,12 @@ describe("storage", async () => {
 		await F.confirm(C.set(v));
 		const { storageHash } = await ethGetProof(F.provider, C.target);
 		const key = toBytes(0, 32);
-		let node: MaybeNode;
-		node = insertLeaf(node, toNibblePath(keccak256(key, "bytes")), toBytes(header));
-		node = insertBytes(node, key, v);
-		expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
+		const storage = new EthStorage(insertLeaf(undefined, toNibblePath(keccak256(key, "bytes")), toBytes(header)));
+		storage.setBytes(key, v);
+		expect(storage.storageHash).toStrictEqual(storageHash);
 	});
 
-	test("insertBytes: w/smaller", async () => {
+	test("setBytes: w/smaller", async () => {
 		const C = await F.deploy(`contract X {
 			bytes slot0;
 			function set(bytes calldata v) external {
@@ -71,10 +69,10 @@ describe("storage", async () => {
 		await F.confirm(C.set(v2));
 		const { storageHash } = await ethGetProof(F.provider, C.target);
 		const key = toBytes(0, 32);
-		let node: MaybeNode;
-		node = insertBytes(node, key, v1);
-		node = insertBytes(node, key, v2);
-		expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
+		const storage = new EthStorage();
+		storage.setBytes(key, v1);
+		storage.setBytes(key, v2);
+		expect(storage.storageHash).toStrictEqual(storageHash);
 	});
 
 	function contractWithStorage(storage: TrieEntry[]) {
@@ -138,11 +136,9 @@ describe("storage", async () => {
 					),
 				);
 				const { storageHash } = await ethGetProof(F.provider, C.target);
-				const node = kv.reduce<MaybeNode>(
-					(a, [k, v]) => insertBytes(a, k, v),
-					undefined,
-				);
-				expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
+				const storage = new EthStorage();
+				for (const [k, v] of kv) storage.setBytes(k, v);
+				expect(storage.storageHash).toStrictEqual(storageHash);
 			});
 		}
 	});

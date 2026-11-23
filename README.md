@@ -4,13 +4,12 @@
 [![npm](https://img.shields.io/npm/v/@ensdomains/merkle-builder)](https://www.npmjs.com/package/@ensdomains/merkle-builder)
 
 * Rebuild a contract's storage trie from events and serve storage proofs without an archive node
-* [`EthStorage`](./src/eth.ts) &mdash; Ethereum Merkle-Patricia trie (keccak), matches `eth_getProof`
-	* Memory efficient (copy-on-write, shared subexpressions)
-	* Compute efficient (branch nodes hash once)
-	* Multiple storage encodings (object, [bytes](./src/coder.ts), [JSON](./src/json.ts)) and [surgery](./src/surgery.ts) (trunk + limbs)
+* [`EthStorage`](./src/eth.ts) &mdash; Ethereum Merkle-Patricia trie (keccak) in memory, matches `eth_getProof`
+	* For small tries and experiments: copy-on-write (free snapshots), branch nodes hash once, JSON (`toJSON` / `fromJSON`)
+* [`EthRowStorage`](./src/rows.ts) &mdash; the same trie as rows in a database, for large tries: reads only the nodes along touched paths and writes back only the nodes that changed
 * [`LineaStorage`](./src/linea.ts) &mdash; Linea sparse Merkle trie ([Poseidon2](./src/poseidon2.ts) over KoalaBear), matches `linea_getProof`
-* [`RowStorage`](./src/rows.ts) &mdash; the same Ethereum trie kept as rows in a database: reads only the nodes along touched paths and writes back only the nodes that changed
 * All extend [`SlotStorage`](./src/storage.ts) (`getStorage` / `setStorage`), which provides the Solidity layout (`setBytes` / `getBytes`)
+* Low-level node functions (`insertLeaf`, `getProof`, `encodeNode`, ...) are in the [`trie`](./src/trie.ts) namespace
 
 ```ts
 import { EthStorage, LineaStorage, followSlot } from "@ensdomains/merkle-builder";
@@ -19,6 +18,7 @@ const eth = new EthStorage();
 eth.setBytes(followSlot(0n, addr32), name);
 eth.storageHash; // eth_getProof().storageHash
 eth.getProof(slot); // eth_getProof().storageProof[i]
+eth.node; // immutable root node (snapshot)
 
 const linea = new LineaStorage();
 linea.setBytes(followSlot(0n, addr32), name); // buffered
@@ -44,12 +44,12 @@ A trie as rows, so memory doesn't grow with the trie (eg. a SQLite table keyed b
 * The empty trie has no rows (storage hash is `keccak256(0x80)`)
 
 ```ts
-import { RowStorage, getProofFromRows, trieRows } from "@ensdomains/merkle-builder";
+import { EthRowStorage, getProofFromRows, trieRows } from "@ensdomains/merkle-builder";
 
 const rows = new Map<string, Uint8Array>(); // or SELECT node FROM rows WHERE path = ?
 const read = (path: string) => rows.get(path); // synchronous
 
-const storage = new RowStorage(read);
+const storage = new EthRowStorage(read);
 storage.setBytes(followSlot(0n, addr32), name); // buffered: reads see pending writes
 const { rows: changed, storageHash } = storage.commit(); // only the rows that changed
 for (const { path, node } of changed) {
@@ -68,8 +68,8 @@ trieRows(eth.node); // every row of an in-memory trie (eg. to migrate an EthStor
 | store | names/s | rows written/s | peak RSS |
 | --- | --: | --: | --: |
 | `eth` &mdash; `EthStorage` (in memory) | 16,749 | | 2,473 MB |
-| `map` &mdash; `RowStorage` + `Map` | 21,137 | 75,814 | 2,999 MB |
-| `sqlite` &mdash; `RowStorage` + `bun:sqlite` (WAL) | 14,592 | 52,337 | 344 MB (69 MB after GC) |
+| `map` &mdash; `EthRowStorage` + `Map` | 21,137 | 75,814 | 2,999 MB |
+| `sqlite` &mdash; `EthRowStorage` + `bun:sqlite` (WAL) | 14,592 | 52,337 | 344 MB (69 MB after GC) |
 
 <sub>10,000 names per commit, 2,665,120 rows, same storage hash; the `map` store holds every row in memory</sub>
 
@@ -110,5 +110,5 @@ trieRows(eth.node); // every row of an in-memory trie (eg. to migrate an EthStor
     * `bun run readme`
 * Replay the same events into `LineaStorage` and match `linea_getProof` (run `bun run demo -c linea` first to sync)
     * `bun run demo:linea`
-* Deserialize from *trunk* and *limb* with precomputed hashes, perform surgery, and produce correct `eth_getProof`
-    * `bun run demo:memory -c <chain> -d <depth>`
+* Replay ~1.9M synthetic names into `EthRowStorage` (`Map` or SQLite rows) or `EthStorage`
+    * `bun run bench:rows -s map|sqlite|eth`

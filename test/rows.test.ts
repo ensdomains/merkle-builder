@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { keccak256, toHex } from "viem";
 import { EthStorage, setPath } from "../src/eth.js";
-import { getProofFromRows, getRowProof, RowStorage, type TrieRow, trieRows } from "../src/rows.js";
+import { EthRowStorage, getProofFromRows, getRowProof, type TrieRow, trieRows } from "../src/rows.js";
 import { EMPTY_BYTES, findLeaf, getProof, getRootHash, type MaybeNode } from "../src/trie.js";
 import { toBigInt, toBytes, trimLeadingZeros } from "../src/utils.js";
 import { randomBytes, randomInt } from "./utils.js";
@@ -60,10 +60,10 @@ function randomValue(): Uint8Array {
 	return randomBytes(1 + randomInt(32));
 }
 
-// path-level mirror of RowStorage and an in-memory trie
+// path-level mirror of EthRowStorage and an in-memory trie
 class PathMirror {
 	readonly store = new Store();
-	readonly storage = new RowStorage(this.store.get);
+	readonly storage = new EthRowStorage(this.store.get);
 	node: MaybeNode;
 	committed: MaybeNode; // copy-on-write snapshot
 	set(key: Uint8Array, value: Uint8Array) {
@@ -91,10 +91,10 @@ class PathMirror {
 	}
 }
 
-// slot-level mirror of RowStorage and EthStorage
+// slot-level mirror of EthRowStorage and EthStorage
 class SlotMirror {
 	readonly store = new Store();
-	readonly rows = new RowStorage(this.store.get);
+	readonly rows = new EthRowStorage(this.store.get);
 	readonly eth = new EthStorage();
 	setStorage(slot: Uint8Array, value: Uint8Array) {
 		this.rows.setStorage(slot, value);

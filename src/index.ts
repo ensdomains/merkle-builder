@@ -1,12 +1,8 @@
-export * from "./coder.js";
 export * from "./eth.js";
-export * from "./inspect.js";
-export * from "./json.js";
-export * from "./kv.js";
 export * from "./linea.js";
 export * from "./poseidon2.js";
 export * from "./rows.js";
 export * from "./storage.js";
-export * from "./surgery.js";
-export * from "./trie.js";
+export type { BranchNode, ExtensionNode, LeafNode, MaybeNode, Node } from "./trie.js";
+export * as trie from "./trie.js";
 export { followSlot, toBigInt, toWord, trimLeadingZeros } from "./utils.js";

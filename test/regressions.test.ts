@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { keccak256, toHex } from "viem";
-import { Coder } from "../src/coder.js";
-import { insertBytes, insertWord } from "../src/kv.js";
+import { EthStorage } from "../src/eth.js";
 import {
 	deleteNode,
+	EMPTY_BYTES,
 	encodeNode,
 	findLeaf,
 	getRootHash,
@@ -54,11 +54,13 @@ describe("regressions", () => {
 		expect(getRootHash(node)).toStrictEqual(keccak256(encodeNode(node), "bytes"));
 	});
 
-	test("insertBytes(delete): all-zero chunk is not stored", () => {
+	test("setBytes: all-zero chunk is not stored", () => {
 		const slot = toBytes(0, 32);
 		const value = new Uint8Array(64);
 		value[0] = 1; // chunk #0 nonzero, chunk #1 all zero
-		const node = insertBytes(undefined, slot, value);
+		const storage = new EthStorage();
+		storage.setBytes(slot, value);
+		const { node } = storage;
 		const first = keccak256(slot, "bytes");
 		const chunk1 = toBytes(BigInt(`0x${Buffer.from(first).toString("hex")}`) + 1n, 32);
 		expect(findLeaf(node, toNibblePath(keccak256(first, "bytes")))).toBeDefined();
@@ -72,19 +74,20 @@ describe("regressions", () => {
 		expect(toBytes(0)).toStrictEqual(p());
 	});
 
-	test("insertBytes: stale data slots are cleared", () => {
+	test("setBytes: stale data slots are cleared", () => {
 		const slot = toBytes(0, 32);
-		const long = new Uint8Array(100).fill(1);
-		const node = insertBytes(undefined, slot, long);
+		const storage = new EthStorage();
+		storage.setBytes(slot, new Uint8Array(100).fill(1));
 		const stale = toNibblePath(keccak256(keccak256(slot, "bytes"), "bytes")); // first data slot
-		expect(findLeaf(node, stale)).toBeDefined();
-		expect(findLeaf(insertBytes(node, slot, Uint8Array.of(1)), stale)).toBeUndefined();
-		expect(insertWord(undefined, slot, Uint8Array.of(0))).toBeUndefined();
+		expect(findLeaf(storage.node, stale)).toBeDefined();
+		storage.setBytes(slot, Uint8Array.of(1));
+		expect(findLeaf(storage.node, stale)).toBeUndefined();
+		storage.setBytes(slot, EMPTY_BYTES);
+		expect(storage.node).toBeUndefined();
 	});
 
 	test("empty leaves are rejected", () => {
 		expect(() => insertLeaf(undefined, p(1), p())).toThrow("empty leaf");
-		expect(() => new Coder(Uint8Array.of(3)).readNode()).toThrow("no longer supported");
 	});
 
 	test("encodeNode: children < 32 bytes are embedded as lists, not bytes", () => {

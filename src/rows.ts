@@ -120,10 +120,11 @@ function common(path: Uint8Array, key: Uint8Array, depth: number): number {
 }
 
 // Ethereum storage trie (Merkle-Patricia + keccak) backed by rows (see TrieRow)
+// memory does not grow with the trie (for small tries, EthStorage is simpler)
 // * only the nodes along touched paths are read (and cached until commit)
 // * writes are applied to the cached nodes (reads see them) until commit()
 // * commit() returns the rows that changed: persist them before the next read
-export class RowStorage extends SlotStorage {
+export class EthRowStorage extends SlotStorage {
 	#root: Loaded | undefined;
 	#rootLoaded = false;
 	#original = new Map<string, Uint8Array>(); // original rows of the loaded nodes

@@ -1,8 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { Foundry } from "@adraffy/blocksmith";
 import { toHex } from "viem";
-import { insertBytes } from "../src/kv.js";
-import { getRootHash, type MaybeNode } from "../src/trie.js";
+import { EthStorage } from "../src/eth.js";
 import { followSlot, toBytes } from "../src/utils.js";
 import { ethGetProof } from "./rpc.js";
 import { randomBytes, randomInt } from "./utils.js";
@@ -17,14 +16,10 @@ describe("registrar", async () => {
 			args: [1n],
 		});
 
-		let node: MaybeNode ;
+		const storage = new EthStorage();
 
 		C.on("NameForAddrChanged", (addr: string, name: string) => {
-			node = insertBytes(
-				node,
-				followSlot(0n, toBytes(addr, 32)),
-				Buffer.from(name)
-			);
+			storage.setBytes(followSlot(0n, toBytes(addr, 32)), Buffer.from(name));
 		});
 
 		for (let i = 0; i < 10; ++i) {
@@ -36,6 +31,6 @@ describe("registrar", async () => {
 
 		const { storageHash } = await ethGetProof(F.provider, C.target);
 
-		expect(toHex(getRootHash(node))).toStrictEqual(storageHash);
+		expect(storage.storageHash).toStrictEqual(storageHash);
 	});
 });

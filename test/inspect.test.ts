@@ -1,12 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
+	copyNode,
 	getByteCount,
 	getLeafCount,
 	getNodeCount,
 	getNodeType,
-} from "../src/inspect.js";
-import {
-	copyNode,
 	getRootHash,
 	insertLeaf,
 	isBranch,
