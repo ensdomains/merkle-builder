@@ -1,6 +1,6 @@
 {
 	"name": "@ensdomains/merkle-builder",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Rebuild contract storage tries (Ethereum Merkle-Patricia, Linea sparse Merkle) and generate eth_getProof / linea_getProof",
 	"type": "module",
 	"exports": {
@@ -26,7 +26,7 @@
 		"fuzz": "while bun test test/storage.test.ts; do :; done",
 		"demo": "bun scripts/demo.ts",
 		"demo:linea": "bun scripts/linea.ts",
-		"demo:memory": "bun scripts/memory.ts",
+		"bench:rows": "bun scripts/rows.ts",
 		"readme": "bun scripts/readme.ts",
 		"prepublishOnly": "bun run check && bun test && bun run build"
 	},

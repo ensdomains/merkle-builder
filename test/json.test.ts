@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { fromJSON, toJSON } from "../src/json.js";
+import { EthStorage } from "../src/eth.js";
 import { insertLeaf, type MaybeNode } from "../src/trie.js";
 import { randomTrie } from "./utils.js";
+
+const toJSON = (node: MaybeNode, depth?: number) => new EthStorage(node).toJSON(depth);
+const fromJSON = (json: unknown) => EthStorage.fromJSON(json).node;
 
 describe("json", () => {
 	test("null", () => {
@@ -90,5 +93,11 @@ describe("json", () => {
 		expect(() => fromJSON("xyz")).toThrow(); // not hex
 		expect(() => fromJSON("")).toThrow("empty leaf"); // zero is no leaf
 		expect(() => fromJSON("0001")).toThrow("not trim");
+	});
+
+	test("JSON.stringify uses EthStorage.toJSON()", () => {
+		const { node } = randomTrie();
+		const storage = new EthStorage(node);
+		expect(EthStorage.fromJSON(JSON.parse(JSON.stringify(storage))).node).toStrictEqual(node);
 	});
 });

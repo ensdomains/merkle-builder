@@ -1,5 +1,6 @@
 import keccak256 from "@adraffy/keccak/256";
 import { concat, toHex } from "viem";
+import { encodePath, encodeRlpBytes, encodeRlpList } from "./rlp.js";
 import { equalBytes } from "./utils.js";
 
 export type LeafNode = { path: Uint8Array; data: Uint8Array };
@@ -273,10 +274,11 @@ export function encodeNode(node: MaybeNode): Uint8Array {
 	}
 }
 
+// a child < 32 bytes is embedded as is (rlp list), otherwise by hash (rlp bytes)
 function encodeNodeRef(node: MaybeNode) {
 	if (!node) return RLP_NULL;
 	const v = encodeNode(node);
-	return encodeRlpBytes(v.length < 32 ? v : hashNode(node, v));
+	return v.length < 32 ? v : encodeRlpBytes(hashNode(node, v));
 }
 
 // keccak256(encodeNode(node)), cached on branches
@@ -311,41 +313,60 @@ export function toNibblePath(v: Uint8Array): Uint8Array {
 	return u;
 }
 
-function encodePath(path: Uint8Array, leaf: boolean): Uint8Array {
-	const v = new Uint8Array(1 + (path.length >> 1));
-	if (leaf) v[0] = 32;
-	const odd = path.length & 1;
-	if (path.length & 1) v[0] |= 16 | path[0];
-	for (let i = odd, j = 1; i < path.length; i += 2, ++j) {
-		v[j] = (path[i] << 4) | path[i + 1];
+// inspection
+
+export function getByteCount(
+	node: MaybeNode,
+	sizeOf = (v: Uint8Array) => v.length
+): number {
+	if (!node) {
+		return 0;
+	} else if (isLeaf(node)) {
+		return sizeOf(node.path) + sizeOf(node.data);
+	} else if (isExtension(node)) {
+		return sizeOf(node.path) + getByteCount(node.child, sizeOf);
+	} else {
+		return node.children.reduce(
+			(a, x) => a + getByteCount(x, sizeOf),
+			(node.cache ? sizeOf(node.cache) : 0) +
+				(node.hash ? sizeOf(node.hash) : 0) +
+				node.children.length
+		);
 	}
-	return v;
 }
 
-function encodeRlpLength(start: number, length: number): Uint8Array {
-	const max = 55;
-	if (length <= max) return Uint8Array.of(start + length);
-	const v = new Uint8Array(8);
-	let i = v.length;
-	for (; length; length >>= 8, ++start) {
-		v[--i] = length;
+export function getLeafCount(node: MaybeNode): number {
+	if (!node) {
+		return 0;
+	} else if (isLeaf(node)) {
+		return 1;
+	} else if (isExtension(node)) {
+		return getLeafCount(node.child);
+	} else {
+		return node.children.reduce((a, x) => a + getLeafCount(x), 0);
 	}
-	v[--i] = start + max;
-	return v.subarray(i);
 }
 
-function encodeRlpList(m: Uint8Array[]): Uint8Array {
-	return concat([
-		encodeRlpLength(
-			0xc0,
-			m.reduce((a, x) => a + x.length, 0)
-		),
-		...m
-	]);
+export function getNodeCount(node: MaybeNode): number {
+	if (!node) {
+		return 0;
+	} else if (isLeaf(node)) {
+		return 1;
+	} else if (isExtension(node)) {
+		return 1 + getNodeCount(node.child);
+	} else {
+		return node.children.reduce((a, x) => a + getNodeCount(x), 1);
+	}
 }
 
-function encodeRlpBytes(v: Uint8Array): Uint8Array {
-	const max = 0x80;
-	if (v.length === 1 && v[0] < max) return v;
-	return concat([encodeRlpLength(max, v.length), v]);
+export function getNodeType(node: MaybeNode) {
+	if (isBranch(node)) {
+		return "branch";
+	} else if (isExtension(node)) {
+		return "extension";
+	} else if (isLeaf(node)) {
+		return "leaf";
+	} else {
+		return "null";
+	}
 }
