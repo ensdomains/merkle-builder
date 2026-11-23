@@ -41,18 +41,27 @@ const red = (s: string) => styleText("red", s);
 const fmt = (n: number) => Math.round(n).toLocaleString("en-US");
 const SEP = dim(" · ");
 
-// the sync progress line is redrawn in place (the demo is run from a terminal)
-let progressShown = false;
+// sticky progress line at the bottom (the demo is run from a terminal):
+// log() prints above it and redraws it, so it stays visible while updating
+let status = "";
+function drawStatus() {
+	// line wrap off while drawing: a line wider than the terminal is clipped instead of wrapped
+	process.stdout.write(`\r\x1b[2K\x1b[?7l${status}\x1b[?7h`);
+}
 function log(line: string) {
-	if (progressShown) {
-		process.stdout.write("\r\x1b[2K");
-		progressShown = false;
-	}
+	if (status) process.stdout.write("\r\x1b[2K");
 	console.log(line);
+	if (status) drawStatus();
 }
 function progress(line: string) {
-	process.stdout.write(`\r\x1b[2K${line}`);
-	progressShown = true;
+	status = line;
+	drawStatus();
+}
+// keep the last progress line and continue below it
+function endProgress() {
+	if (!status) return;
+	status = "";
+	process.stdout.write("\n");
 }
 
 function info(label: string, value: string) {
@@ -150,7 +159,8 @@ function commitRows() {
 }
 
 process.once("SIGINT", () => {
-	log(yellow("\nStopping..."));
+	endProgress();
+	log(yellow("Stopping..."));
 	db.close();
 	process.exit();
 });
@@ -264,6 +274,7 @@ async function sync() {
 			log(
 				`${bold("Syncing")} ${fmt(block0)} → ${fmt(head)} ${dim(`(${fmt(head - block0 + 1)} blocks)`)}`,
 			);
+			if (block0 === start) progress(`${cyan("[  0.0%]")} ${fmt(block0)} / ${fmt(head)}`);
 		}
 		while (block0 < head) {
 			const { logs, lastBlock } = await getLogs(
@@ -312,6 +323,7 @@ async function sync() {
 	const { timestamp } = await client.getBlock({ blockNumber: last });
 	updateState.run("timestampBlock", String(last));
 	updateState.run("timestamp", String(timestamp));
+	endProgress();
 	log(
 		`${green("Synced")} ${fmt(added)} new names` +
 			dim(` in ${fmtDuration((performance.now() - t0) / 1000)} (${fmt(calls)} rpc calls)`),
@@ -426,5 +438,6 @@ function rebuildRows() {
 		progress(`${bold("Rebuilding rows")} ${fmt(done)} / ${fmt(total)} names`);
 	}
 	updateState.run("rowsBlock", String(block0)); // the rows are complete
+	endProgress();
 	log(`${green("Rebuilt")} ${fmt(done)} names into rows ${dim(`in ${fmtDuration((performance.now() - t) / 1000)}`)}`);
 }
