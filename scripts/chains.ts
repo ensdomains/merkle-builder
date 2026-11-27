@@ -5,7 +5,6 @@ export type ChainInfo = {
 	testnet?: boolean;
 	explorer: string;
 	logStep?: number; // eth_getLogs block range
-	unfinalized?: boolean; // sync to "latest" instead of "finalized"
 	// rpc info
 	publicRPC?: string; // used for eth_getLogs when set
 	drpcSlug?: string;
@@ -69,16 +68,6 @@ function chainInfoFor(key: string): Omit<ChainInfo, "key"> {
 				publicRPC: "https://rpc.linea.build",
 				drpcSlug: "linea",
 				alchemySlug: "linea-mainnet",
-			};
-		case "scroll":
-			return {
-				name: "scroll",
-				id: 534352,
-				explorer: "https://scrollscan.com",
-				publicRPC: "https://rpc.scroll.io",
-				drpcSlug: "scroll",
-				alchemySlug: "scroll-mainnet",
-				unfinalized: true, // 20260219: not sure why finalized is being weird
 			};
 		default:
 			throw new Error(`unsupported chain: ${key}`);

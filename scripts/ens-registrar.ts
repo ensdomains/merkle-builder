@@ -47,7 +47,6 @@ const DEPLOYMENTS: Record<number, Omit<Registrar, "address">> = {
 	10: { createdAtBlock: 137403854 }, // optimism
 	8453: { createdAtBlock: 31808582, ownable: true }, // base
 	59144: { createdAtBlock: 20173340 }, // linea
-	534352: { createdAtBlock: 16604272 }, // scroll
 };
 
 export function getRegistrar(chain: ChainInfo): Registrar {
