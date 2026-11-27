@@ -105,7 +105,6 @@ trieRows(eth.node); // every row of an in-memory trie (eg. to migrate an EthStor
         * ✅️ [`base`](https://basescan.org/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `1,899,502` names as of `2026-01-28`
         * ✅️ [`arb`](https://arbiscan.io/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `272` names as of `2026-11-22`
         * ✅️ [`linea`](https://lineascan.build/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `111` names as of `2026-11-22`
-        * ✅️ [`scroll`](https://scrollscan.com/address/0x0000000000D8e504002cC26E3Ec46D81971C1664) &rarr; `67` names as of `2026-11-22`
     * `--rebuild` rebuilds the rows from the synced names (also done automatically on first run) &bull; `--noSync` skips syncing
 * Update the name counts and dates above from `scripts/data/*.sqlite`
     * `bun run readme`

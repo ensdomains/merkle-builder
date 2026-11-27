@@ -265,7 +265,7 @@ async function sync() {
 	while (true) {
 		const loop0 = Date.now();
 		const block = await client.getBlock({
-			blockTag: chainInfo.unfinalized ? "latest" : "finalized",
+			blockTag: "finalized",
 		});
 		const head = Number(block.number);
 		if (block0 >= head) {
